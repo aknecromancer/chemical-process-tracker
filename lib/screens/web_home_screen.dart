@@ -5,6 +5,8 @@ import '../models/production_batch.dart';
 import '../models/configurable_defaults.dart';
 import '../services/calculation_engine.dart';
 import 'web_batch_entry_screen.dart';
+import 'settings_screen.dart';
+import 'batch_history_screen.dart';
 
 class WebHomeScreen extends StatefulWidget {
   const WebHomeScreen({super.key});
@@ -455,12 +457,7 @@ class BatchHistoryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      appBar: null,
-      body: Center(
-        child: Text('Batch History - Coming Soon!'),
-      ),
-    );
+    return const BatchHistoryScreen();
   }
 }
 
@@ -469,11 +466,6 @@ class SettingsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      appBar: null,
-      body: Center(
-        child: Text('Settings - Coming Soon!'),
-      ),
-    );
+    return const SettingsScreen();
   }
 }
