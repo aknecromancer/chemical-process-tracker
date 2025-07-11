@@ -197,85 +197,204 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Search and Date Range Row
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Search',
-                      hintText: 'Date, profit, efficiency...',
-                      prefixIcon: Icon(Icons.search),
-                      isDense: true,
-                    ),
-                    onChanged: _updateSearch,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _selectDateRange,
-                    icon: const Icon(Icons.date_range),
-                    label: Text(startDate != null && endDate != null
-                        ? '${DateFormat('dd/MM').format(startDate!)} - ${DateFormat('dd/MM').format(endDate!)}'
-                        : 'Date Range'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (startDate != null || endDate != null || searchQuery.isNotEmpty || statusFilter != null || showProfitableOnly)
-                  IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: _clearFilters,
-                    tooltip: 'Clear Filters',
-                  ),
-              ],
+            // Search and Date Range Row - Mobile Responsive
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 600;
+                
+                if (isMobile) {
+                  // Mobile Layout: Stack vertically
+                  return Column(
+                    children: [
+                      // Search Field
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'Search',
+                          hintText: 'Date, profit, efficiency...',
+                          prefixIcon: Icon(Icons.search),
+                          isDense: true,
+                        ),
+                        onChanged: _updateSearch,
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Date Range and Clear Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _selectDateRange,
+                              icon: const Icon(Icons.date_range, size: 16),
+                              label: Text(
+                                startDate != null && endDate != null
+                                    ? '${DateFormat('dd/MM').format(startDate!)} - ${DateFormat('dd/MM').format(endDate!)}'
+                                    : 'Date Range',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ),
+                          if (startDate != null || endDate != null || searchQuery.isNotEmpty || statusFilter != null || showProfitableOnly) ...[
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: _clearFilters,
+                              tooltip: 'Clear Filters',
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  );
+                } else {
+                  // Desktop/Tablet Layout: Keep horizontal
+                  return Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Search',
+                            hintText: 'Date, profit, efficiency...',
+                            prefixIcon: Icon(Icons.search),
+                            isDense: true,
+                          ),
+                          onChanged: _updateSearch,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _selectDateRange,
+                          icon: const Icon(Icons.date_range),
+                          label: Text(startDate != null && endDate != null
+                              ? '${DateFormat('dd/MM').format(startDate!)} - ${DateFormat('dd/MM').format(endDate!)}'
+                              : 'Date Range'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (startDate != null || endDate != null || searchQuery.isNotEmpty || statusFilter != null || showProfitableOnly)
+                        IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: _clearFilters,
+                          tooltip: 'Clear Filters',
+                        ),
+                    ],
+                  );
+                }
+              },
             ),
             const SizedBox(height: 12),
             
-            // Filter Chips Row
-            Row(
-              children: [
-                // Status Filter
-                DropdownButton<BatchStatus?>(
-                  value: statusFilter,
-                  hint: const Text('All Status'),
-                  isDense: true,
-                  onChanged: _updateStatusFilter,
-                  items: [
-                    const DropdownMenuItem<BatchStatus?>(
-                      value: null,
-                      child: Text('All Status'),
-                    ),
-                    ...BatchStatus.values.map((status) => DropdownMenuItem(
-                      value: status,
-                      child: Text(status.name.toUpperCase()),
-                    )),
-                  ],
-                ),
-                const SizedBox(width: 16),
+            // Filter Chips Row - Mobile Responsive
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 600;
                 
-                // Profitable Only Toggle
-                FilterChip(
-                  label: const Text('Profitable Only'),
-                  selected: showProfitableOnly,
-                  onSelected: (selected) {
-                    setState(() {
-                      showProfitableOnly = selected;
-                      _applyFilters();
-                    });
-                  },
-                ),
-                const Spacer(),
-                
-                // Sort Options
-                Text('Sort by: ', style: Theme.of(context).textTheme.bodySmall),
-                _buildSortChip('Date', 'date'),
-                const SizedBox(width: 8),
-                _buildSortChip('Profit', 'profit'),
-                const SizedBox(width: 8),
-                _buildSortChip('Efficiency', 'efficiency'),
-              ],
+                if (isMobile) {
+                  // Mobile Layout: Stack filters and sort options vertically
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Filters Row
+                      Row(
+                        children: [
+                          // Status Filter - Compact
+                          Expanded(
+                            child: DropdownButton<BatchStatus?>(
+                              value: statusFilter,
+                              hint: const Text('Status'),
+                              isDense: true,
+                              isExpanded: true,
+                              onChanged: _updateStatusFilter,
+                              items: [
+                                const DropdownMenuItem<BatchStatus?>(
+                                  value: null,
+                                  child: Text('All'),
+                                ),
+                                ...BatchStatus.values.map((status) => DropdownMenuItem(
+                                  value: status,
+                                  child: Text(status.name.toUpperCase()),
+                                )),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          
+                          // Profitable Only Toggle - Compact
+                          FilterChip(
+                            label: const Text('Profitable', style: TextStyle(fontSize: 12)),
+                            selected: showProfitableOnly,
+                            onSelected: (selected) {
+                              setState(() {
+                                showProfitableOnly = selected;
+                                _applyFilters();
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Sort Options Row
+                      Row(
+                        children: [
+                          Text('Sort: ', style: Theme.of(context).textTheme.bodySmall),
+                          _buildSortChip('Date', 'date'),
+                          const SizedBox(width: 4),
+                          _buildSortChip('Profit', 'profit'),
+                          const SizedBox(width: 4),
+                          _buildSortChip('Efficiency', 'efficiency'),
+                        ],
+                      ),
+                    ],
+                  );
+                } else {
+                  // Desktop/Tablet Layout: Keep horizontal
+                  return Row(
+                    children: [
+                      // Status Filter
+                      DropdownButton<BatchStatus?>(
+                        value: statusFilter,
+                        hint: const Text('All Status'),
+                        isDense: true,
+                        onChanged: _updateStatusFilter,
+                        items: [
+                          const DropdownMenuItem<BatchStatus?>(
+                            value: null,
+                            child: Text('All Status'),
+                          ),
+                          ...BatchStatus.values.map((status) => DropdownMenuItem(
+                            value: status,
+                            child: Text(status.name.toUpperCase()),
+                          )),
+                        ],
+                      ),
+                      const SizedBox(width: 16),
+                      
+                      // Profitable Only Toggle
+                      FilterChip(
+                        label: const Text('Profitable Only'),
+                        selected: showProfitableOnly,
+                        onSelected: (selected) {
+                          setState(() {
+                            showProfitableOnly = selected;
+                            _applyFilters();
+                          });
+                        },
+                      ),
+                      const Spacer(),
+                      
+                      // Sort Options
+                      Text('Sort by: ', style: Theme.of(context).textTheme.bodySmall),
+                      _buildSortChip('Date', 'date'),
+                      const SizedBox(width: 8),
+                      _buildSortChip('Profit', 'profit'),
+                      const SizedBox(width: 8),
+                      _buildSortChip('Efficiency', 'efficiency'),
+                    ],
+                  );
+                }
+              },
             ),
           ],
         ),
@@ -405,60 +524,148 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
               ),
               const SizedBox(height: 12),
               
-              // Metrics Row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildMetric(
-                      'Net P&L',
-                      '₹${batch.netPnL.toStringAsFixed(0)}',
-                      batch.isProfitable ? Colors.green : Colors.red,
-                      batch.isProfitable ? Icons.trending_up : Icons.trending_down,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildMetric(
-                      'PD Efficiency',
-                      '${batch.pdEfficiency.toStringAsFixed(2)}%',
-                      Colors.blue,
-                      Icons.analytics,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildMetric(
-                      'Total Expenses',
-                      '₹${batch.totalExpenses.toStringAsFixed(0)}',
-                      Colors.orange,
-                      Icons.calculate,
-                    ),
-                  ),
-                ],
+              // Metrics Row - Mobile Responsive
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isMobile = constraints.maxWidth < 400;
+                  
+                  if (isMobile) {
+                    // Mobile: Stack metrics vertically in rows of 2
+                    return Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildMetric(
+                                'Net P&L',
+                                '₹${batch.netPnL.toStringAsFixed(0)}',
+                                batch.isProfitable ? Colors.green : Colors.red,
+                                batch.isProfitable ? Icons.trending_up : Icons.trending_down,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildMetric(
+                                'PD Efficiency',
+                                '${batch.pdEfficiency.toStringAsFixed(2)}%',
+                                Colors.blue,
+                                Icons.analytics,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildMetric(
+                                'Total Expenses',
+                                '₹${batch.totalExpenses.toStringAsFixed(0)}',
+                                Colors.orange,
+                                Icons.calculate,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(child: SizedBox()), // Empty space for alignment
+                          ],
+                        ),
+                      ],
+                    );
+                  } else {
+                    // Desktop/Tablet: Keep horizontal layout
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetric(
+                            'Net P&L',
+                            '₹${batch.netPnL.toStringAsFixed(0)}',
+                            batch.isProfitable ? Colors.green : Colors.red,
+                            batch.isProfitable ? Icons.trending_up : Icons.trending_down,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildMetric(
+                            'PD Efficiency',
+                            '${batch.pdEfficiency.toStringAsFixed(2)}%',
+                            Colors.blue,
+                            Icons.analytics,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildMetric(
+                            'Total Expenses',
+                            '₹${batch.totalExpenses.toStringAsFixed(0)}',
+                            Colors.orange,
+                            Icons.calculate,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                },
               ),
               
-              // Quick Actions
+              // Quick Actions - Mobile Responsive
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: () => _duplicateBatch(batch),
-                    icon: const Icon(Icons.copy, size: 16),
-                    label: const Text('Duplicate'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => WebBatchEntryScreen(date: batch.date),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isMobile = constraints.maxWidth < 400;
+                  
+                  if (isMobile) {
+                    // Mobile: Full width buttons
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _duplicateBatch(batch),
+                            icon: const Icon(Icons.copy, size: 16),
+                            label: const Text('Duplicate'),
+                          ),
                         ),
-                      ).then((_) => _loadBatches());
-                    },
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Edit'),
-                  ),
-                ],
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => WebBatchEntryScreen(date: batch.date),
+                                ),
+                              ).then((_) => _loadBatches());
+                            },
+                            icon: const Icon(Icons.edit, size: 16),
+                            label: const Text('Edit'),
+                          ),
+                        ),
+                      ],
+                    );
+                  } else {
+                    // Desktop/Tablet: Right-aligned buttons
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => _duplicateBatch(batch),
+                          icon: const Icon(Icons.copy, size: 16),
+                          label: const Text('Duplicate'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => WebBatchEntryScreen(date: batch.date),
+                              ),
+                            ).then((_) => _loadBatches());
+                          },
+                          icon: const Icon(Icons.edit, size: 16),
+                          label: const Text('Edit'),
+                        ),
+                      ],
+                    );
+                  }
+                },
               ),
             ],
           ),
