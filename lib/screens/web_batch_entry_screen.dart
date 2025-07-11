@@ -542,7 +542,7 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildCostBreakdownRow('Phase 1 Total Cost (E13)', result.phase1TotalCost),
+                  _buildCostBreakdownRow('Phase 1 Total Cost (E13)', result.phase1WithOther),
                   _buildCostBreakdownRow('TIN Expenses (E36)', result.tinCost, isExpense: true),
                   _buildCostBreakdownRow('PD Profit (E25)', result.pnl, isIncome: true),
                   _buildCostBreakdownRow('CU Income (E35)', result.cuIncome, isIncome: true),

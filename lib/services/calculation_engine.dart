@@ -19,6 +19,7 @@ class CalculationResult {
   final double costPer1kgPd;
   final double totalCost; // E13 + E36 - E25 - E35
   final double pnl; // E25 - Profit/Loss from PD sales
+  final double phase1WithOther; // E13 for Cost Breakdown (includes Other)
   final bool isProfitNegative;
   final Map<String, double> materialCosts;
   final Map<String, double> unitCosts;
@@ -40,6 +41,7 @@ class CalculationResult {
     required this.costPer1kgPd,
     required this.totalCost,
     required this.pnl,
+    required this.phase1WithOther,
     required this.isProfitNegative,
     required this.materialCosts,
     required this.unitCosts,
@@ -106,7 +108,7 @@ class AdvancedCalculationEngine {
         'hcl': 0,
         'worker': 0,
         'rent': 0,
-        'other': 0,
+        // 'other': 0, // Moved to manual entries
         'account': 0,
         'cu': 0,
         'tin': 0,
@@ -124,7 +126,7 @@ class AdvancedCalculationEngine {
       'hcl': hclQuantity,
       'worker': pattiQuantity, // Same quantity as Patti
       'rent': pattiQuantity, // Same quantity as Patti
-      'other': pattiQuantity, // Same quantity as Patti
+      // 'other': pattiQuantity, // Moved to manual entries
       'account': pattiQuantity, // Same quantity as Patti
       'cu': cuQuantity,
       'tin': tinQuantity,
@@ -139,7 +141,7 @@ class AdvancedCalculationEngine {
       'account': defaults.calculatedAccountRate,
       'nitric': defaults.defaultNitricRate,
       'hcl': defaults.defaultHclRate,
-      'other': defaults.defaultOtherRate,
+      // 'other': defaults.defaultOtherRate, // Moved to manual entries
       'pd': defaults.defaultPdRate,
       'cu': defaults.defaultCuRate,
       'tin': defaults.defaultTinRate,
@@ -204,15 +206,16 @@ class AdvancedCalculationEngine {
         isCalculated: true,
         isDefaultRate: true,
       ),
-      MaterialInput(
-        materialId: 'other',
-        name: 'Other',
-        rate: effectiveRates['other']!,
-        quantity: quantities['other']!,
-        category: MaterialCategory.raw,
-        isCalculated: false,
-        isDefaultRate: customRates?.containsKey('other') != true,
-      ),
+      // MaterialInput 'other' moved to manual entries
+      // MaterialInput(
+      //   materialId: 'other',
+      //   name: 'Other',
+      //   rate: effectiveRates['other']!,
+      //   quantity: quantities['other']!,
+      //   category: MaterialCategory.raw,
+      //   isCalculated: false,
+      //   isDefaultRate: customRates?.containsKey('other') != true,
+      // ),
       MaterialInput(
         materialId: 'account',
         name: 'Account',
@@ -288,9 +291,12 @@ class AdvancedCalculationEngine {
     final products = materials.where((m) => m.category == MaterialCategory.product).toList();
     final byproducts = materials.where((m) => m.category == MaterialCategory.byproduct).toList();
 
-    // Calculate Phase 1: Total Cost
+    // Calculate Phase 1: Total Cost (E13 - without Other for display)
     final phase1Materials = [...rawMaterials, ...derivedMaterials];
     final phase1TotalCost = phase1Materials.fold(0.0, (sum, m) => sum + m.amount);
+    
+    // Calculate Phase 1 with Other Amount for P&L calculation (E25)
+    final phase1WithOther = phase1TotalCost + (pattiQuantity * defaults.defaultOtherRate);
 
     // Calculate Phase 2: Product Income
     final pdIncome = products.fold(0.0, (sum, m) => sum + m.amount);
@@ -303,13 +309,14 @@ class AdvancedCalculationEngine {
     final netByproductIncome = cuIncome - tinIncome;
 
     // Excel Formula Implementation
-    // E13 = Phase1TotalCost, E36 = TIN Amount, E25 = P&L, E35 = CU Amount
+    // E13 = Phase1TotalCost (without Other), E36 = TIN Amount, E25 = P&L, E35 = CU Amount
     
-    // Calculate P&L (E25) = PD Income - Phase1 Cost
-    final pnl = pdIncome - phase1TotalCost;
+    // Calculate P&L (E25) = PD Income - Phase1 Cost (WITH Other for Excel consistency)
+    final pnl = pdIncome - phase1WithOther;
     
     // Calculate Total Cost using exact Excel formula: E13 + E36 - E25 - E35
-    final totalCost = phase1TotalCost + tinIncome - pnl - cuIncome;
+    // E13 should include Other amount for correct Excel formula
+    final totalCost = phase1WithOther + tinIncome - pnl - cuIncome;
     
     // Calculate Cost per 1kg PD = Total_Cost / PD_Quantity
     final costPer1kgPd = (pdQuantity != null && pdQuantity > 0) ? totalCost / pdQuantity : 0.0;
@@ -359,6 +366,7 @@ class AdvancedCalculationEngine {
       costPer1kgPd: costPer1kgPd,
       totalCost: totalCost,
       pnl: pnl,
+      phase1WithOther: phase1WithOther,
       isProfitNegative: netProfit < 0,
       materialCosts: materialCosts,
       unitCosts: unitCosts,
@@ -425,6 +433,7 @@ class AdvancedCalculationEngine {
       costPer1kgPd: 0,
       totalCost: 0,
       pnl: 0,
+      phase1WithOther: 0,
       isProfitNegative: false,
       materialCosts: {},
       unitCosts: {},
