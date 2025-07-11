@@ -1,0 +1,42 @@
+[build]
+  # Build command
+  command = "flutter build web --release"
+  
+  # Directory to publish (Flutter web output)
+  publish = "build/web"
+  
+  # Build environment
+  [build.environment]
+    FLUTTER_VERSION = "3.27.4"
+
+[context.production]
+  command = "flutter build web --release"
+
+[context.deploy-preview]
+  command = "flutter build web --release"
+
+# Headers for Flutter web apps
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+
+# Cache static assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Flutter service worker
+[[headers]]
+  for = "/flutter_service_worker.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# Redirects for Flutter web
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
