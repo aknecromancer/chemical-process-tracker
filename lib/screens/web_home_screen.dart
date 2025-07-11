@@ -1,30 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'enhanced_batch_entry_screen.dart';
-import 'batch_history_screen.dart';
-import 'analytics_screen.dart';
-import 'settings_screen.dart';
-import '../services/batch_processing_service.dart';
+import '../services/web_storage_service.dart';
 import '../models/production_batch.dart';
+import '../models/configurable_defaults.dart';
+import '../services/calculation_engine.dart';
+import 'web_batch_entry_screen.dart';
 
-class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({super.key});
+class WebHomeScreen extends StatefulWidget {
+  const WebHomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+  State<WebHomeScreen> createState() => _WebHomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _WebHomeScreenState extends State<WebHomeScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
-
-  static const List<Widget> _screens = [
-    DashboardTab(),
-    BatchHistoryScreen(),
-    AnalyticsScreen(),
-    SettingsScreen(),
-  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -39,6 +30,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> screens = [
+      const DashboardTab(),
+      const BatchHistoryTab(),
+      const SettingsTab(),
+    ];
+
     return Scaffold(
       body: PageView(
         controller: _pageController,
@@ -47,7 +44,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             _selectedIndex = index;
           });
         },
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -65,10 +62,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             label: 'Batches',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.analytics),
-            label: 'Analytics',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
@@ -78,14 +71,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class DashboardTab extends ConsumerStatefulWidget {
+class DashboardTab extends StatefulWidget {
   const DashboardTab({super.key});
 
   @override
-  ConsumerState<DashboardTab> createState() => _DashboardTabState();
+  State<DashboardTab> createState() => _DashboardTabState();
 }
 
-class _DashboardTabState extends ConsumerState<DashboardTab> {
+class _DashboardTabState extends State<DashboardTab> {
   ProductionBatch? todaysBatch;
   List<ProductionBatch> recentBatches = [];
   bool isLoading = true;
@@ -101,11 +94,20 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     
     try {
       final today = DateTime.now();
-      todaysBatch = await BatchProcessingService.getBatchByDate(today);
       
-      final allBatches = await BatchProcessingService.getAllBatches();
-      recentBatches = allBatches.take(5).toList();
+      // Check for today's batch
+      todaysBatch = await WebStorageService.getBatchByDate(today);
+      
+      // Get all batches and sort them properly
+      final allBatches = await WebStorageService.getAllBatches();
+      allBatches.sort((a, b) => b.date.compareTo(a.date)); // Sort by date, newest first
+      
+      // Take the 10 most recent batches for better visibility
+      recentBatches = allBatches.take(10).toList();
+      
+      print('Loaded ${recentBatches.length} recent batches');
     } catch (e) {
+      print('Error loading data: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading data: $e')),
@@ -121,14 +123,14 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   Future<void> _createTodaysBatch() async {
     try {
       final today = DateTime.now();
-      await BatchProcessingService.createBatch(today);
+      await WebStorageService.createBatch(today);
       await _loadData();
       
       if (mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => EnhancedBatchEntryScreen(date: today),
+            builder: (context) => WebBatchEntryScreen(date: today),
           ),
         ).then((_) => _loadData());
       }
@@ -272,7 +274,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EnhancedBatchEntryScreen(date: DateTime.now()),
+                      builder: (context) => WebBatchEntryScreen(date: DateTime.now()),
                     ),
                   ).then((_) => _loadData());
                 },
@@ -398,7 +400,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => EnhancedBatchEntryScreen(date: batch.date),
+              builder: (context) => WebBatchEntryScreen(date: batch.date),
             ),
           ).then((_) => _loadData());
         },
@@ -445,5 +447,33 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
       case BatchStatus.archived:
         return Colors.grey;
     }
+  }
+}
+
+class BatchHistoryTab extends StatelessWidget {
+  const BatchHistoryTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      appBar: null,
+      body: Center(
+        child: Text('Batch History - Coming Soon!'),
+      ),
+    );
+  }
+}
+
+class SettingsTab extends StatelessWidget {
+  const SettingsTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      appBar: null,
+      body: Center(
+        child: Text('Settings - Coming Soon!'),
+      ),
+    );
   }
 }

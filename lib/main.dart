@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'screens/home_screen.dart';
+import 'dart:html' as html;
+import 'screens/web_home_screen.dart';
 
 void main() {
-  runApp(const ProviderScope(child: ChemicalProcessTrackerApp()));
+  runApp(const ChemicalProcessTrackerApp());
 }
 
 class ChemicalProcessTrackerApp extends StatelessWidget {
@@ -46,7 +46,7 @@ class ChemicalProcessTrackerApp extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       ),
-      home: const HomeScreen(),
+      home: const WebHomeScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

@@ -5,6 +5,8 @@ import '../models/production_batch.dart';
 import '../models/batch_material.dart';
 import '../models/formula_dependency.dart';
 import '../models/price_history.dart';
+import '../models/configurable_defaults.dart';
+import 'database_web_initializer.dart';
 
 class DatabaseService {
   static Database? _database;
@@ -21,6 +23,9 @@ class DatabaseService {
   }
 
   Future<Database> _initDatabase() async {
+    // Initialize database factory for web/desktop platforms
+    await DatabaseWebInitializer.initialize();
+    
     final databasePath = await getDatabasesPath();
     final path = join(databasePath, _databaseName);
 
@@ -113,6 +118,28 @@ class DatabaseService {
         source TEXT DEFAULT 'manual',
         created_at INTEGER NOT NULL,
         FOREIGN KEY (material_id) REFERENCES material_templates(id)
+      )
+    ''');
+
+    // Create configurable_defaults table
+    await db.execute('''
+      CREATE TABLE configurable_defaults (
+        id TEXT PRIMARY KEY,
+        worker_fixed_amount REAL DEFAULT 38000,
+        rent_fixed_amount REAL DEFAULT 25000,
+        account_fixed_amount REAL DEFAULT 5000,
+        fixed_denominator REAL DEFAULT 4500,
+        cu_percentage REAL DEFAULT 0.10,
+        tin_numerator REAL DEFAULT 11,
+        tin_denominator REAL DEFAULT 30,
+        default_pd_rate REAL DEFAULT 12000,
+        default_cu_rate REAL DEFAULT 600,
+        default_tin_rate REAL DEFAULT 38,
+        default_other_rate REAL DEFAULT 4,
+        default_nitric_rate REAL DEFAULT 26,
+        default_hcl_rate REAL DEFAULT 1.7,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
       )
     ''');
 
@@ -243,6 +270,26 @@ class DatabaseService {
       'operation': 'multiply',
       'sequence_order': 2,
       'is_active': 1,
+    });
+
+    // Insert default configurable defaults
+    await db.insert('configurable_defaults', {
+      'id': 'default',
+      'worker_fixed_amount': 38000,
+      'rent_fixed_amount': 25000,
+      'account_fixed_amount': 5000,
+      'fixed_denominator': 4500,
+      'cu_percentage': 0.10,
+      'tin_numerator': 11,
+      'tin_denominator': 30,
+      'default_pd_rate': 12000,
+      'default_cu_rate': 600,
+      'default_tin_rate': 38,
+      'default_other_rate': 4,
+      'default_nitric_rate': 26,
+      'default_hcl_rate': 1.7,
+      'created_at': now,
+      'updated_at': now,
     });
 
     // Insert default settings
@@ -540,6 +587,48 @@ class DatabaseService {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  // ConfigurableDefaults CRUD operations
+  Future<ConfigurableDefaults> getConfigurableDefaults() async {
+    final db = await database;
+    final maps = await db.query(
+      'configurable_defaults',
+      limit: 1,
+    );
+    
+    if (maps.isNotEmpty) {
+      return ConfigurableDefaults.fromMap(maps.first);
+    } else {
+      // If no defaults exist, create and return default instance
+      final defaults = ConfigurableDefaults.createDefault();
+      await insertConfigurableDefaults(defaults);
+      return defaults;
+    }
+  }
+
+  Future<String> insertConfigurableDefaults(ConfigurableDefaults defaults) async {
+    final db = await database;
+    await db.insert('configurable_defaults', defaults.toMap());
+    return defaults.id;
+  }
+
+  Future<void> updateConfigurableDefaults(ConfigurableDefaults defaults) async {
+    final db = await database;
+    final updatedDefaults = defaults.copyWith(updatedAt: DateTime.now());
+    await db.update(
+      'configurable_defaults',
+      updatedDefaults.toMap(),
+      where: 'id = ?',
+      whereArgs: [defaults.id],
+    );
+  }
+
+  Future<void> resetConfigurableDefaults() async {
+    final db = await database;
+    await db.delete('configurable_defaults');
+    final defaults = ConfigurableDefaults.createDefault();
+    await insertConfigurableDefaults(defaults);
   }
 
   // Utility methods
