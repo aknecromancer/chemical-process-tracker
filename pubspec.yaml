@@ -1,5 +1,5 @@
 name: chemical_process_tracker
-description: "A new Flutter project."
+description: "Specialized Flutter app for chemical manufacturing process management with material dependencies and multi-phase P&L calculations."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -34,6 +34,26 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  
+  # Database
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  
+  # UUID Generation
+  uuid: ^4.2.1
+  
+  # Date/Time utilities
+  intl: ^0.19.0
+  
+  # Charts for analytics
+  fl_chart: ^0.65.0
+  
+  # File handling for exports
+  path_provider: ^2.1.2
+  csv: ^5.0.2
 
 dev_dependencies:
   flutter_test:
