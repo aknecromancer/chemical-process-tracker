@@ -7,6 +7,7 @@ class CalculationResult {
   final double pdIncome;
   final double cuIncome;
   final double tinIncome;
+  final double tinCost;
   final double netByproductIncome;
   final double grossProfit;
   final double netProfit;
@@ -25,6 +26,7 @@ class CalculationResult {
     required this.pdIncome,
     required this.cuIncome,
     required this.tinIncome,
+    required this.tinCost,
     required this.netByproductIncome,
     required this.grossProfit,
     required this.netProfit,
@@ -262,6 +264,8 @@ class AdvancedCalculationEngine {
     required double pattiRate,
     double? pdQuantity,
     Map<String, double>? customRates,
+    double manualIncome = 0,
+    double manualExpenses = 0,
   }) {
     if (pattiQuantity <= 0) {
       return _createZeroResult();
@@ -294,9 +298,9 @@ class AdvancedCalculationEngine {
     final tinIncome = tinMaterial.amount;
     final netByproductIncome = cuIncome - tinIncome;
 
-    // Calculate P&L
+    // Calculate P&L with manual entries
     final grossProfit = pdIncome - phase1TotalCost;
-    final netProfit = grossProfit + netByproductIncome;
+    final netProfit = grossProfit + netByproductIncome + manualIncome - manualExpenses;
 
     // Calculate efficiency and unit costs
     final pdEfficiency = (pdQuantity != null && pdQuantity > 0 && pattiQuantity > 0) 
@@ -328,6 +332,7 @@ class AdvancedCalculationEngine {
       pdIncome: pdIncome,
       cuIncome: cuIncome,
       tinIncome: tinIncome,
+      tinCost: tinIncome,
       netByproductIncome: netByproductIncome,
       grossProfit: grossProfit,
       netProfit: netProfit,
@@ -391,6 +396,7 @@ class AdvancedCalculationEngine {
       pdIncome: 0,
       cuIncome: 0,
       tinIncome: 0,
+      tinCost: 0,
       netByproductIncome: 0,
       grossProfit: 0,
       netProfit: 0,

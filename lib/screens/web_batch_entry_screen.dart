@@ -32,6 +32,7 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
   double _pattiRate = 0;
   double? _pdQuantity;
   Map<String, double> _customRates = {};
+  List<Map<String, dynamic>> _manualEntries = [];
   
   bool _isLoading = true;
 
@@ -82,6 +83,7 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
             _pattiRate = data['pattiRate']?.toDouble() ?? 0;
             _pdQuantity = data['pdQuantity']?.toDouble();
             _customRates = Map<String, double>.from(data['customRates'] ?? {});
+            _manualEntries = List<Map<String, dynamic>>.from(data['manualEntries'] ?? []);
             
             // Update controllers
             if (_pattiQuantity > 0) {
@@ -121,12 +123,25 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
         customRates: _customRates,
       );
 
+      // Calculate manual entries total
+      double manualIncomeTotal = 0;
+      double manualExpenseTotal = 0;
+      for (final entry in _manualEntries) {
+        if (entry['type'] == 'income') {
+          manualIncomeTotal += entry['amount'] ?? 0;
+        } else {
+          manualExpenseTotal += entry['amount'] ?? 0;
+        }
+      }
+
       // Calculate results
       final result = _calculationEngine!.calculateProcess(
         pattiQuantity: _pattiQuantity,
         pattiRate: _pattiRate,
         pdQuantity: _pdQuantity,
         customRates: _customRates,
+        manualIncome: manualIncomeTotal,
+        manualExpenses: manualExpenseTotal,
       );
 
       if (mounted) {
@@ -146,6 +161,7 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
         'pattiRate': _pattiRate,
         'pdQuantity': _pdQuantity,
         'customRates': _customRates,
+        'manualEntries': _manualEntries,
         'autoSavedAt': DateTime.now().toIso8601String(),
       };
       html.window.localStorage[batchKey] = jsonEncode(batchData);
@@ -328,16 +344,76 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildMaterialDisplay('Nitric', _pattiQuantity * 1.4, _defaults!.defaultNitricRate),
-                    _buildMaterialDisplay('HCL', _pattiQuantity * 1.4 * 3.0, _defaults!.defaultHclRate),
-                    _buildMaterialDisplay('Worker', _pattiQuantity, _defaults!.calculatedWorkerRate),
-                    _buildMaterialDisplay('Rent', _pattiQuantity, _defaults!.calculatedRentRate),
-                    _buildMaterialDisplay('Account', _pattiQuantity, _defaults!.calculatedAccountRate),
+                    _buildEditableMaterialDisplay('Nitric', _pattiQuantity * 1.4, _defaults!.defaultNitricRate, 'nitric'),
+                    _buildEditableMaterialDisplay('HCL', _pattiQuantity * 1.4 * 3.0, _defaults!.defaultHclRate, 'hcl'),
+                    _buildEditableMaterialDisplay('Worker', _pattiQuantity, _defaults!.calculatedWorkerRate, 'worker'),
+                    _buildEditableMaterialDisplay('Rent', _pattiQuantity, _defaults!.calculatedRentRate, 'rent'),
+                    _buildEditableMaterialDisplay('Account', _pattiQuantity, _defaults!.calculatedAccountRate, 'account'),
                   ],
                 ),
               ),
             ),
           ],
+
+          // Byproduct Materials
+          if (_pattiQuantity > 0 && _defaults != null) ...[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Byproduct Materials',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildEditableMaterialDisplay('CU', _pattiQuantity * (_defaults!.cuPercentage / 100), _defaults!.defaultCuRate, 'cu'),
+                    _buildEditableMaterialDisplay('TIN', _pattiQuantity * (_defaults!.tinNumerator / _defaults!.tinDenominator), _defaults!.defaultTinRate, 'tin'),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          // Manual Income/Expense Entries
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Manual Entries',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _addManualEntry,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Entry'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (_manualEntries.isEmpty)
+                    Text(
+                      'No manual entries added. Use \"Add Entry\" to include custom income or expenses.',
+                      style: TextStyle(color: Colors.grey[600]),
+                    )
+                  else
+                    ..._manualEntries.asMap().entries.map((entry) => 
+                      _buildManualEntryRow(entry.key, entry.value)),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -432,6 +508,19 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
                   _buildPnLRow('Gross Profit', result.grossProfit),
                   _buildPnLRow('Total Cost', result.phase1TotalCost),
                   _buildPnLRow('PD Income', result.pdIncome),
+                  if (result.cuIncome > 0 || result.tinCost > 0) ...[
+                    _buildPnLRow('CU Income', result.cuIncome),
+                    _buildPnLRow('TIN Cost', -result.tinCost),
+                    _buildPnLRow('Byproduct Net', result.cuIncome - result.tinCost),
+                  ],
+                  if (_manualEntries.isNotEmpty) ...[
+                    const Divider(),
+                    ..._manualEntries.map((entry) => _buildPnLRow(
+                      entry['description'],
+                      entry['type'] == 'income' ? entry['amount'] : -entry['amount'],
+                      isManual: true,
+                    )),
+                  ],
                 ],
               ),
             ),
@@ -494,6 +583,178 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
     );
   }
 
+  Widget _buildEditableMaterialDisplay(String name, double quantity, double defaultRate, String rateKey) {
+    final currentRate = _customRates[rateKey] ?? defaultRate;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              name,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            child: Text('${quantity.toStringAsFixed(2)} kg'),
+          ),
+          Expanded(
+            child: SizedBox(
+              height: 40,
+              child: TextFormField(
+                initialValue: currentRate.toStringAsFixed(2),
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                  border: const OutlineInputBorder(),
+                  hintText: '₹/kg',
+                  isDense: true,
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  final newRate = double.tryParse(value);
+                  if (newRate != null) {
+                    setState(() {
+                      _customRates[rateKey] = newRate;
+                    });
+                    _recalculate();
+                  }
+                },
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '₹${(quantity * currentRate).toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManualEntryRow(int index, Map<String, dynamic> entry) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              entry['description'] ?? 'Manual Entry',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              entry['type'] == 'income' ? 'Income' : 'Expense',
+              style: TextStyle(
+                color: entry['type'] == 'income' ? Colors.green : Colors.red,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '₹${entry['amount']?.toStringAsFixed(2) ?? '0.00'}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: entry['type'] == 'income' ? Colors.green : Colors.red,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: () => _removeManualEntry(index),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addManualEntry() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        String description = '';
+        double amount = 0;
+        String type = 'expense';
+        
+        return AlertDialog(
+          title: const Text('Add Manual Entry'),
+          content: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      hintText: 'e.g., Transport, Maintenance',
+                    ),
+                    onChanged: (value) => description = value,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Amount (₹)',
+                      hintText: 'Enter amount',
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) => amount = double.tryParse(value) ?? 0,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: type,
+                    decoration: const InputDecoration(
+                      labelText: 'Type',
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'expense', child: Text('Expense')),
+                      DropdownMenuItem(value: 'income', child: Text('Income')),
+                    ],
+                    onChanged: (value) => setState(() => type = value ?? 'expense'),
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (description.isNotEmpty && amount > 0) {
+                  setState(() {
+                    _manualEntries.add({
+                      'description': description,
+                      'amount': amount,
+                      'type': type,
+                    });
+                  });
+                  _recalculate();
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _removeManualEntry(int index) {
+    setState(() {
+      _manualEntries.removeAt(index);
+    });
+    _recalculate();
+  }
+
   Widget _buildEfficiencyCard() {
     final efficiency = (_pdQuantity! / _pattiQuantity) * 100;
     final isValid = efficiency >= 0.1 && efficiency <= 10.0;
@@ -526,18 +787,30 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
     );
   }
 
-  Widget _buildPnLRow(String label, double amount, {bool isTotal = false, bool isNegative = false}) {
+  Widget _buildPnLRow(String label, double amount, {bool isTotal = false, bool isNegative = false, bool isManual = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              fontSize: isTotal ? 16 : 14,
-            ),
+          Row(
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+                  fontSize: isTotal ? 16 : 14,
+                ),
+              ),
+              if (isManual) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.edit,
+                  size: 12,
+                  color: Colors.grey[600],
+                ),
+              ],
+            ],
           ),
           Text(
             '₹${amount.toStringAsFixed(2)}',
