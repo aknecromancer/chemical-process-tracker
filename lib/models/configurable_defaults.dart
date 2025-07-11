@@ -31,9 +31,9 @@ class ConfigurableDefaults {
     this.rentFixedAmount = 25000,
     this.accountFixedAmount = 5000,
     this.fixedDenominator = 4500,
-    this.cuPercentage = 0.10, // 10% of Patti
-    this.tinNumerator = 11,
-    this.tinDenominator = 30,
+    this.cuPercentage = 10.0, // 10% of Patti
+    this.tinNumerator = 1,
+    this.tinDenominator = 450,
     this.defaultPdRate = 12000,
     this.defaultCuRate = 600,
     this.defaultTinRate = 38,

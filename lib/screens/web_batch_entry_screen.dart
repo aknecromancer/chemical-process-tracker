@@ -527,6 +527,36 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
           ),
           const SizedBox(height: 16),
 
+          // Excel Formula Cost Breakdown
+          Card(
+            color: _getCostBreakdownColor(result),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'COST BREAKDOWN (Excel Formula)',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildCostBreakdownRow('Phase 1 Total Cost (E13)', result.phase1TotalCost),
+                  _buildCostBreakdownRow('TIN Expenses (E36)', result.tinCost, isExpense: true),
+                  _buildCostBreakdownRow('PD Profit (E25)', result.pnl, isIncome: true),
+                  _buildCostBreakdownRow('CU Income (E35)', result.cuIncome, isIncome: true),
+                  const Divider(),
+                  _buildCostBreakdownRow('Total Cost', result.totalCost, isTotal: true),
+                  _buildCostBreakdownRow('PD Quantity', _pdQuantity ?? 0, unit: 'kg'),
+                  const Divider(),
+                  _buildCostBreakdownRow('Cost per 1 KG PD', result.costPer1kgPd, isResult: true),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
           // Efficiency Metrics
           Card(
             child: Padding(
@@ -544,7 +574,6 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
                   _buildMetricRow('PD Efficiency', '${result.pdEfficiency.toStringAsFixed(3)}%', 
                     isValid: result.pdEfficiency >= 0.1 && result.pdEfficiency <= 10.0),
                   _buildMetricRow('Profit per 100kg', '₹${result.profitPer100kg.toStringAsFixed(2)}'),
-                  _buildMetricRow('Cost per 1kg PD', '₹${result.costPer1kgPd.toStringAsFixed(2)}'),
                 ],
               ),
             ),
@@ -753,6 +782,64 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
       _manualEntries.removeAt(index);
     });
     _recalculate();
+  }
+
+  Color? _getCostBreakdownColor(CalculationResult result) {
+    if (_pdQuantity == null || _pdQuantity! <= 0) return null;
+    
+    // Color coding based on Total Cost vs PD Income ratio
+    final ratio = result.totalCost / result.pdIncome;
+    
+    if (ratio < 0.8) return Colors.green.shade50; // Good - Total Cost < 80% of PD Income
+    if (ratio < 0.95) return Colors.yellow.shade50; // Warning - 80-95%
+    return Colors.red.shade50; // Alert - > 95%
+  }
+  
+  Widget _buildCostBreakdownRow(String label, double amount, {
+    bool isTotal = false, 
+    bool isResult = false, 
+    bool isExpense = false, 
+    bool isIncome = false,
+    String unit = '',
+  }) {
+    String valueText;
+    if (unit == 'kg') {
+      valueText = '${amount.toStringAsFixed(3)} $unit';
+    } else {
+      String prefix = '';
+      if (isExpense) prefix = '+';
+      if (isIncome) prefix = '-';
+      valueText = '$prefix₹${amount.toStringAsFixed(2)}';
+    }
+    
+    Color? textColor;
+    if (isIncome) textColor = Colors.green.shade700;
+    if (isExpense) textColor = Colors.red.shade700;
+    if (isResult) textColor = Theme.of(context).colorScheme.primary;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: isTotal || isResult ? FontWeight.bold : FontWeight.normal,
+              fontSize: isTotal || isResult ? 16 : 14,
+            ),
+          ),
+          Text(
+            valueText,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: isTotal || isResult ? 16 : 14,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildEfficiencyCard() {

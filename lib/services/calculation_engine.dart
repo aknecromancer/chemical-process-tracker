@@ -17,6 +17,8 @@ class CalculationResult {
   final double otherCostPerUnit;
   final double profitPer100kg;
   final double costPer1kgPd;
+  final double totalCost; // E13 + E36 - E25 - E35
+  final double pnl; // E25 - Profit/Loss from PD sales
   final bool isProfitNegative;
   final Map<String, double> materialCosts;
   final Map<String, double> unitCosts;
@@ -36,6 +38,8 @@ class CalculationResult {
     required this.otherCostPerUnit,
     required this.profitPer100kg,
     required this.costPer1kgPd,
+    required this.totalCost,
+    required this.pnl,
     required this.isProfitNegative,
     required this.materialCosts,
     required this.unitCosts,
@@ -298,16 +302,28 @@ class AdvancedCalculationEngine {
     final tinIncome = tinMaterial.amount;
     final netByproductIncome = cuIncome - tinIncome;
 
-    // Calculate P&L with manual entries
+    // Excel Formula Implementation
+    // E13 = Phase1TotalCost, E36 = TIN Amount, E25 = P&L, E35 = CU Amount
+    
+    // Calculate P&L (E25) = PD Income - Phase1 Cost
+    final pnl = pdIncome - phase1TotalCost;
+    
+    // Calculate Total Cost using exact Excel formula: E13 + E36 - E25 - E35
+    final totalCost = phase1TotalCost + tinIncome - pnl - cuIncome;
+    
+    // Calculate Cost per 1kg PD = Total_Cost / PD_Quantity
+    final costPer1kgPd = (pdQuantity != null && pdQuantity > 0) ? totalCost / pdQuantity : 0.0;
+    
+    // Calculate net profit with manual entries
     final grossProfit = pdIncome - phase1TotalCost;
     final netProfit = grossProfit + netByproductIncome + manualIncome - manualExpenses;
 
-    // Calculate efficiency and unit costs
+    // Calculate efficiency
     final pdEfficiency = (pdQuantity != null && pdQuantity > 0 && pattiQuantity > 0) 
         ? (pdQuantity / pattiQuantity) * 100 
         : 0.0;
 
-    // Calculate unit costs
+    // Calculate unit costs for display
     final materialCostPerUnit = pattiQuantity > 0 ? phase1TotalCost / pattiQuantity : 0.0;
     final chemicalCosts = derivedMaterials.fold(0.0, (sum, m) => sum + m.amount);
     final otherCosts = rawMaterials.fold(0.0, (sum, m) => sum + m.amount);
@@ -316,7 +332,6 @@ class AdvancedCalculationEngine {
 
     // Calculate profit metrics
     final profitPer100kg = pattiQuantity > 0 ? (netProfit / pattiQuantity) * 100 : 0.0;
-    final costPer1kgPd = (pdQuantity != null && pdQuantity > 0) ? phase1TotalCost / pdQuantity : 0.0;
 
     // Create material costs map
     final materialCosts = <String, double>{};
@@ -342,6 +357,8 @@ class AdvancedCalculationEngine {
       otherCostPerUnit: otherCostPerUnit,
       profitPer100kg: profitPer100kg,
       costPer1kgPd: costPer1kgPd,
+      totalCost: totalCost,
+      pnl: pnl,
       isProfitNegative: netProfit < 0,
       materialCosts: materialCosts,
       unitCosts: unitCosts,
@@ -406,6 +423,8 @@ class AdvancedCalculationEngine {
       otherCostPerUnit: 0,
       profitPer100kg: 0,
       costPer1kgPd: 0,
+      totalCost: 0,
+      pnl: 0,
       isProfitNegative: false,
       materialCosts: {},
       unitCosts: {},
