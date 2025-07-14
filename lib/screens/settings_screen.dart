@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/configurable_defaults.dart';
 import '../services/defaults_service.dart';
-import '../theme/app_theme.dart';
-import '../theme/app_colors.dart';
-import '../widgets/premium_card.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -198,67 +195,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.backgroundGradientStart,
-                AppColors.backgroundGradientEnd,
-              ],
-            ),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(
-                  color: AppColors.primaryBlue,
-                  strokeWidth: 3,
-                ),
-                const SizedBox(height: AppTheme.spacing16),
-                Text(
-                  'Loading Settings...',
-                  style: AppTheme.titleMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: LayoutBuilder(
-          builder: (context, constraints) {
-            // Use shorter title on mobile for better alignment
-            final isMobile = constraints.maxWidth < 600;
-            return Text(isMobile ? 'Settings' : 'Settings & Defaults');
-          },
-        ),
+        title: const Text('Settings & Defaults'),
         actions: [
           TextButton.icon(
             onPressed: _isSaving ? null : _resetToDefaults,
-            icon: Icon(Icons.restore, color: AppColors.secondaryOrange),
-            label: Text('Reset', style: AppTheme.labelMedium.copyWith(color: AppColors.secondaryOrange)),
+            icon: const Icon(Icons.restore),
+            label: const Text('Reset'),
           ),
           const SizedBox(width: 8),
           ElevatedButton.icon(
             onPressed: _isSaving ? null : _saveSettings,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryBlue,
-              foregroundColor: Colors.white,
-            ),
             icon: _isSaving 
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.save),
             label: Text(_isSaving ? 'Saving...' : 'Save'),
@@ -266,30 +224,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(width: 16),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.backgroundGradientStart,
-              AppColors.backgroundGradientEnd,
-            ],
-          ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppTheme.spacing16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildRateCalculationsSection(),
-              const SizedBox(height: AppTheme.spacing24),
-              _buildByproductFormulasSection(),
-              const SizedBox(height: AppTheme.spacing24),
-              _buildDefaultRatesSection(),
-              const SizedBox(height: AppTheme.spacing24),
-            ],
-          ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildRateCalculationsSection(),
+            const SizedBox(height: 24),
+            _buildByproductFormulasSection(),
+            const SizedBox(height: 24),
+            _buildDefaultRatesSection(),
+          ],
         ),
       ),
     );
@@ -382,8 +327,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (description != null) ...[
           Text(
             description,
-            style: AppTheme.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Colors.grey[600],
             ),
           ),
           const SizedBox(height: 8),
@@ -436,54 +381,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildByproductFormulasSection() {
     if (_defaults == null) return const SizedBox();
     
-    return PremiumCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppTheme.spacing8),
-                decoration: BoxDecoration(
-                  color: AppColors.successGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                ),
-                child: Icon(
-                  Icons.functions_outlined,
-                  color: AppColors.successGreen,
-                  size: 24,
-                ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Byproduct Formulas',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(width: AppTheme.spacing12),
-              Text(
-                'Byproduct Formulas',
-                style: AppTheme.headlineSmall,
-              ),
-            ],
-          ),
+            ),
             const SizedBox(height: 8),
             Text(
               'Configure quantity calculations for CU and TIN materials',
-              style: AppTheme.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
               ),
             ),
             const SizedBox(height: 16),
             
             // CU Formula
-            Container(
-              padding: const EdgeInsets.all(AppTheme.spacing12),
-              decoration: BoxDecoration(
-                color: AppColors.info.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                border: Border.all(color: AppColors.info.withOpacity(0.3)),
-              ),
-              child: Text(
-                'CU Quantity = Patti Quantity × CU Percentage',
-                style: AppTheme.labelMedium.copyWith(
-                  color: AppColors.info,
-                  fontFamily: 'monospace',
-                ),
+            Text(
+              'CU Quantity = Patti Quantity × CU Percentage',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[600],
               ),
             ),
             const SizedBox(height: 8),
@@ -493,25 +416,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   flex: 2,
                   child: Text(
                     'CU Percentage',
-                    style: AppTheme.titleMedium,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ),
                 Expanded(
                   flex: 2,
                   child: TextFormField(
                     controller: _cuPercentageController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Percentage',
                       hintText: '10.0',
                       suffixText: '%',
                       isDense: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                        borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
-                      ),
                     ),
                     keyboardType: TextInputType.number,
                   ),
@@ -520,18 +436,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Expanded(
                   flex: 2,
                   child: Container(
-                    padding: const EdgeInsets.all(AppTheme.spacing12),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.successGreen.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                      border: Border.all(color: AppColors.successGreen.withOpacity(0.3)),
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       'Example: 200kg → ${(200 * (_defaults!.cuPercentage / 100)).toStringAsFixed(1)}kg',
-                      style: AppTheme.labelMedium.copyWith(
-                        color: AppColors.successGreen,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
@@ -540,19 +455,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             
             // TIN Formula
-            Container(
-              padding: const EdgeInsets.all(AppTheme.spacing12),
-              decoration: BoxDecoration(
-                color: AppColors.info.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                border: Border.all(color: AppColors.info.withOpacity(0.3)),
-              ),
-              child: Text(
-                'TIN Quantity = (TIN Numerator ÷ TIN Denominator) × Patti Quantity',
-                style: AppTheme.labelMedium.copyWith(
-                  color: AppColors.info,
-                  fontFamily: 'monospace',
-                ),
+            Text(
+              'TIN Quantity = (TIN Numerator ÷ TIN Denominator) × Patti Quantity',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[600],
               ),
             ),
             const SizedBox(height: 8),
@@ -562,23 +468,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   flex: 1,
                   child: Text(
                     'TIN Formula',
-                    style: AppTheme.titleMedium,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ),
                 Expanded(
                   child: TextFormField(
                     controller: _tinNumeratorController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Numerator',
                       hintText: '11',
                       isDense: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                        borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
-                      ),
                     ),
                     keyboardType: TextInputType.number,
                   ),
@@ -590,17 +489,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _tinDenominatorController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Denominator',
                       hintText: '30',
                       isDense: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                        borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
-                      ),
                     ),
                     keyboardType: TextInputType.number,
                   ),
@@ -609,18 +501,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Expanded(
                   flex: 2,
                   child: Container(
-                    padding: const EdgeInsets.all(AppTheme.spacing12),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.secondaryOrange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                      border: Border.all(color: AppColors.secondaryOrange.withOpacity(0.3)),
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       'Example: 200kg → ${(200 * (_defaults!.tinNumerator / _defaults!.tinDenominator)).toStringAsFixed(2)}kg',
-                      style: AppTheme.labelMedium.copyWith(
-                        color: AppColors.secondaryOrange,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
@@ -633,36 +524,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildDefaultRatesSection() {
-    return PremiumCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppTheme.spacing8),
-                decoration: BoxDecoration(
-                  color: AppColors.secondaryOrange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                ),
-                child: Icon(
-                  Icons.attach_money_outlined,
-                  color: AppColors.secondaryOrange,
-                  size: 24,
-                ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Default Material Rates',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(width: AppTheme.spacing12),
-              Text(
-                'Default Material Rates',
-                style: AppTheme.headlineSmall,
-              ),
-            ],
-          ),
+            ),
             const SizedBox(height: 8),
             Text(
               'Set default rates that will be used for all new batches (can be overridden per batch)',
-              style: AppTheme.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
               ),
             ),
             const SizedBox(height: 16),
@@ -670,8 +548,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Product Rates
             Text(
               'Product Rates',
-              style: AppTheme.titleMedium.copyWith(
-                color: AppColors.successGreen,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 12),
@@ -696,8 +574,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Chemical Rates
             Text(
               'Chemical Rates',
-              style: AppTheme.titleMedium.copyWith(
-                color: AppColors.warning,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 12),
@@ -729,13 +607,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         hintText: placeholder,
         suffixText: '₹/kg',
         isDense: true,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-          borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
-        ),
       ),
       keyboardType: TextInputType.number,
     );

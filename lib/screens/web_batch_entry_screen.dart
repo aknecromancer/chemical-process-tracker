@@ -6,6 +6,9 @@ import '../services/web_storage_service.dart';
 import '../services/calculation_engine.dart';
 import '../models/configurable_defaults.dart';
 import '../models/production_batch.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
+import '../widgets/premium_card.dart';
 
 class WebBatchEntryScreen extends StatefulWidget {
   final DateTime date;
@@ -184,8 +187,37 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
     final dateFormat = DateFormat('EEEE, MMMM d, y');
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.backgroundGradientStart,
+                AppColors.backgroundGradientEnd,
+              ],
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  color: AppColors.primaryBlue,
+                  strokeWidth: 3,
+                ),
+                const SizedBox(height: AppTheme.spacing16),
+                Text(
+                  'Loading Batch Entry...',
+                  style: AppTheme.titleMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -194,71 +226,136 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Batch Entry'),
+            Text(
+              'Batch Entry',
+              style: AppTheme.titleLarge.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
             Text(
               dateFormat.format(widget.date),
-              style: Theme.of(context).textTheme.bodySmall,
+              style: AppTheme.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
-          TextButton.icon(
+          ElevatedButton.icon(
             onPressed: _saveBatch,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.successGreen,
+              foregroundColor: Colors.white,
+              elevation: 2,
+            ),
             icon: const Icon(Icons.save),
-            label: const Text('Save'),
+            label: const Text('Save Batch'),
           ),
+          const SizedBox(width: AppTheme.spacing16),
         ],
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Raw Materials', icon: Icon(Icons.inventory_2)),
-            Tab(text: 'Production', icon: Icon(Icons.precision_manufacturing)),
-            Tab(text: 'Results', icon: Icon(Icons.assessment)),
+          labelColor: AppColors.primaryBlue,
+          unselectedLabelColor: AppColors.textSecondary,
+          indicatorColor: AppColors.primaryBlue,
+          indicatorWeight: 3,
+          labelStyle: AppTheme.labelMedium,
+          unselectedLabelStyle: AppTheme.bodySmall,
+          tabs: [
+            Tab(
+              text: 'Raw Materials',
+              icon: Icon(Icons.inventory_2, color: AppColors.rawMaterial),
+            ),
+            Tab(
+              text: 'Production', 
+              icon: Icon(Icons.precision_manufacturing, color: AppColors.product),
+            ),
+            Tab(
+              text: 'Results',
+              icon: Icon(Icons.assessment, color: AppColors.info),
+            ),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildRawMaterialsTab(),
-          _buildProductionTab(),
-          _buildResultsTab(),
-        ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.backgroundGradientStart,
+              AppColors.backgroundGradientEnd,
+            ],
+          ),
+        ),
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildRawMaterialsTab(),
+            _buildProductionTab(),
+            _buildResultsTab(),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildRawMaterialsTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppTheme.spacing16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Validation Errors
           if (_validationErrors.isNotEmpty) ...[
-            Card(
-              color: Colors.red.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+            PremiumCard(
+              child: Container(
+                padding: const EdgeInsets.all(AppTheme.spacing16),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
+                  border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.error, color: Colors.red.shade700),
-                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.all(AppTheme.spacing6),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(AppTheme.borderRadius4),
+                          ),
+                          child: Icon(
+                            Icons.error_outline, 
+                            color: AppColors.error, 
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: AppTheme.spacing12),
                         Text(
                           'Validation Errors',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red.shade700,
+                          style: AppTheme.titleMedium.copyWith(
+                            color: AppColors.error,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppTheme.spacing12),
                     ..._validationErrors.map((error) => 
-                      Text('• $error', style: TextStyle(color: Colors.red.shade700))),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppTheme.spacing4),
+                        child: Text(
+                          '• $error', 
+                          style: AppTheme.bodyMedium.copyWith(
+                            color: AppColors.error,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -267,18 +364,38 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
           ],
 
           // Base Material Input
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Base Material',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+          PremiumCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppTheme.spacing8),
+                      decoration: BoxDecoration(
+                        color: AppColors.rawMaterial.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
+                      ),
+                      child: Icon(
+                        Icons.inventory_2_outlined,
+                        color: AppColors.rawMaterial,
+                        size: 24,
+                      ),
                     ),
+                    const SizedBox(width: AppTheme.spacing12),
+                    Text(
+                      'Base Material (Patti)',
+                      style: AppTheme.headlineSmall,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.spacing8),
+                Text(
+                  'Enter the primary raw material quantity and rate',
+                  style: AppTheme.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
                   ),
+                ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
