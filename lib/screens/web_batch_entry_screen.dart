@@ -310,52 +310,29 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
         children: [
           // Validation Errors
           if (_validationErrors.isNotEmpty) ...[
-            PremiumCard(
-              child: Container(
-                padding: const EdgeInsets.all(AppTheme.spacing16),
-                decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                  border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
-                ),
+            Card(
+              color: Colors.red.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(AppTheme.spacing6),
-                          decoration: BoxDecoration(
-                            color: AppColors.error.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(AppTheme.borderRadius4),
-                          ),
-                          child: Icon(
-                            Icons.error_outline, 
-                            color: AppColors.error, 
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: AppTheme.spacing12),
+                        Icon(Icons.error, color: Colors.red.shade700),
+                        const SizedBox(width: 8),
                         Text(
                           'Validation Errors',
-                          style: AppTheme.titleMedium.copyWith(
-                            color: AppColors.error,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade700,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppTheme.spacing12),
+                    const SizedBox(height: 8),
                     ..._validationErrors.map((error) => 
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppTheme.spacing4),
-                        child: Text(
-                          '• $error', 
-                          style: AppTheme.bodyMedium.copyWith(
-                            color: AppColors.error,
-                          ),
-                        ),
-                      ),
-                    ),
+                      Text('• $error', style: TextStyle(color: Colors.red.shade700))),
                   ],
                 ),
               ),
@@ -364,38 +341,18 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
           ],
 
           // Base Material Input
-          PremiumCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(AppTheme.spacing8),
-                      decoration: BoxDecoration(
-                        color: AppColors.rawMaterial.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                      ),
-                      child: Icon(
-                        Icons.inventory_2_outlined,
-                        color: AppColors.rawMaterial,
-                        size: 24,
-                      ),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Base Material',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(width: AppTheme.spacing12),
-                    Text(
-                      'Base Material (Patti)',
-                      style: AppTheme.headlineSmall,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppTheme.spacing8),
-                Text(
-                  'Enter the primary raw material quantity and rate',
-                  style: AppTheme.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
                   ),
-                ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
