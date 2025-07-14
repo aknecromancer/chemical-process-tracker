@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/production_batch.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
+import 'premium_card.dart';
 
 class AnalyticsDashboard extends StatelessWidget {
   final List<ProductionBatch> batches;
@@ -16,31 +19,71 @@ class AnalyticsDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (batches.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Icon(
+      return PremiumCard(
+        padding: const EdgeInsets.all(AppTheme.spacing40),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppTheme.spacing20),
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
                 Icons.analytics_outlined,
                 size: 48,
-                color: Colors.grey[400],
+                color: AppColors.primaryBlue,
               ),
-              const SizedBox(height: 16),
-              Text(
-                'No data for analytics',
-                style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: AppTheme.spacing24),
+            Text(
+              'No Analytics Data Available',
+              style: AppTheme.headlineMedium.copyWith(
+                color: AppColors.neutral900,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Create some batches to see analytics and trends',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
+            ),
+            const SizedBox(height: AppTheme.spacing12),
+            Text(
+              'Create production batches to unlock powerful analytics and business insights',
+              textAlign: TextAlign.center,
+              style: AppTheme.bodyLarge.copyWith(
+                color: AppColors.neutral600,
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacing20),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacing16,
+                vertical: AppTheme.spacing8,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                border: Border.all(
+                  color: AppColors.info.withOpacity(0.3),
                 ),
               ),
-            ],
-          ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline,
+                    size: 16,
+                    color: AppColors.info,
+                  ),
+                  const SizedBox(width: AppTheme.spacing8),
+                  Text(
+                    'Pro Tip: Analytics appear after your first batch',
+                    style: AppTheme.bodySmall.copyWith(
+                      color: AppColors.info,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -50,9 +93,18 @@ class AnalyticsDashboard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Header
+        PremiumCardHeader(
+          title: 'Business Analytics',
+          subtitle: 'Performance insights and trends analysis',
+          icon: Icons.insights,
+          iconColor: AppColors.primaryBlue,
+        ),
+        const SizedBox(height: AppTheme.spacing20),
+        
         // KPI Cards Row
         _buildKPICards(context),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppTheme.spacing32),
         
         // Charts Row
         LayoutBuilder(
@@ -107,49 +159,119 @@ class AnalyticsDashboard extends StatelessWidget {
         final isCompact = constraints.maxWidth < 600;
         
         if (isCompact) {
-          // Mobile: 2x2 grid
+          // Mobile: 2x3 grid with premium cards
           return Column(
             children: [
               Row(
                 children: [
-                  Expanded(child: _buildKPICard(context, 'Total Batches', stats['totalBatches'].toString(), Icons.inventory, Colors.blue)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildKPICard(context, 'Profitable', stats['profitableBatches'].toString(), Icons.trending_up, Colors.green)),
+                  Expanded(child: PremiumCard.kpi(
+                    title: 'Total Batches',
+                    value: stats['totalBatches'].toString(),
+                    icon: Icons.inventory_2_outlined,
+                    iconColor: AppColors.primaryBlue,
+                  )),
+                  const SizedBox(width: AppTheme.spacing12),
+                  Expanded(child: PremiumCard.kpi(
+                    title: 'Profitable',
+                    value: stats['profitableBatches'].toString(),
+                    icon: Icons.trending_up,
+                    iconColor: AppColors.success,
+                    valueColor: AppColors.success,
+                  )),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTheme.spacing16),
               Row(
                 children: [
-                  Expanded(child: _buildKPICard(context, 'Avg P&L', '₹${stats['avgPnL'].toStringAsFixed(0)}', Icons.account_balance_wallet, stats['avgPnL'] > 0 ? Colors.green : Colors.red)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildKPICard(context, 'Avg Efficiency', '${stats['avgEfficiency'].toStringAsFixed(1)}%', Icons.analytics, Colors.orange)),
+                  Expanded(child: PremiumCard.kpi(
+                    title: 'Average P&L',
+                    value: '₹${stats['avgPnL'].toStringAsFixed(0)}',
+                    icon: Icons.account_balance_wallet_outlined,
+                    iconColor: AppColors.getPnLColor(stats['avgPnL'] as double),
+                    valueColor: AppColors.getPnLColor(stats['avgPnL'] as double),
+                  )),
+                  const SizedBox(width: AppTheme.spacing12),
+                  Expanded(child: PremiumCard.kpi(
+                    title: 'Avg Efficiency',
+                    value: '${stats['avgEfficiency'].toStringAsFixed(1)}%',
+                    icon: Icons.speed,
+                    iconColor: AppColors.getEfficiencyColor(stats['avgEfficiency'] as double),
+                    valueColor: AppColors.getEfficiencyColor(stats['avgEfficiency'] as double),
+                  )),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTheme.spacing16),
               Row(
                 children: [
-                  Expanded(child: _buildKPICard(context, 'Best Day', stats['bestDay'], Icons.star, Colors.purple)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildKPICard(context, 'Success Rate', '${stats['successRate'].toStringAsFixed(0)}%', Icons.check_circle, stats['successRate'] > 70 ? Colors.green : Colors.orange)),
+                  Expanded(child: PremiumCard.kpi(
+                    title: 'Best Day',
+                    value: stats['bestDay'] as String,
+                    icon: Icons.star_outline,
+                    iconColor: AppColors.warning,
+                    valueColor: AppColors.warning,
+                  )),
+                  const SizedBox(width: AppTheme.spacing12),
+                  Expanded(child: PremiumCard.kpi(
+                    title: 'Success Rate',
+                    value: '${stats['successRate'].toStringAsFixed(0)}%',
+                    icon: Icons.verified_outlined,
+                    iconColor: (stats['successRate'] as double) > 70 ? AppColors.success : AppColors.warning,
+                    valueColor: (stats['successRate'] as double) > 70 ? AppColors.success : AppColors.warning,
+                  )),
                 ],
               ),
             ],
           );
         } else {
-          // Desktop/Tablet: Single row
+          // Desktop/Tablet: Single row with premium cards
           return Row(
             children: [
-              Expanded(child: _buildKPICard(context, 'Total Batches', stats['totalBatches'].toString(), Icons.inventory, Colors.blue)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildKPICard(context, 'Profitable', stats['profitableBatches'].toString(), Icons.trending_up, Colors.green)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildKPICard(context, 'Avg P&L', '₹${stats['avgPnL'].toStringAsFixed(0)}', Icons.account_balance_wallet, stats['avgPnL'] > 0 ? Colors.green : Colors.red)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildKPICard(context, 'Avg Efficiency', '${stats['avgEfficiency'].toStringAsFixed(1)}%', Icons.analytics, Colors.orange)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildKPICard(context, 'Best Day', stats['bestDay'], Icons.star, Colors.purple)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildKPICard(context, 'Success Rate', '${stats['successRate'].toStringAsFixed(0)}%', Icons.check_circle, stats['successRate'] > 70 ? Colors.green : Colors.orange)),
+              Expanded(child: PremiumCard.kpi(
+                title: 'Total Batches',
+                value: stats['totalBatches'].toString(),
+                icon: Icons.inventory_2_outlined,
+                iconColor: AppColors.primaryBlue,
+              )),
+              const SizedBox(width: AppTheme.spacing16),
+              Expanded(child: PremiumCard.kpi(
+                title: 'Profitable Batches',
+                value: stats['profitableBatches'].toString(),
+                icon: Icons.trending_up,
+                iconColor: AppColors.success,
+                valueColor: AppColors.success,
+              )),
+              const SizedBox(width: AppTheme.spacing16),
+              Expanded(child: PremiumCard.kpi(
+                title: 'Average P&L',
+                value: '₹${stats['avgPnL'].toStringAsFixed(0)}',
+                icon: Icons.account_balance_wallet_outlined,
+                iconColor: AppColors.getPnLColor(stats['avgPnL'] as double),
+                valueColor: AppColors.getPnLColor(stats['avgPnL'] as double),
+              )),
+              const SizedBox(width: AppTheme.spacing16),
+              Expanded(child: PremiumCard.kpi(
+                title: 'Avg Efficiency',
+                value: '${stats['avgEfficiency'].toStringAsFixed(1)}%',
+                icon: Icons.speed,
+                iconColor: AppColors.getEfficiencyColor(stats['avgEfficiency'] as double),
+                valueColor: AppColors.getEfficiencyColor(stats['avgEfficiency'] as double),
+              )),
+              const SizedBox(width: AppTheme.spacing16),
+              Expanded(child: PremiumCard.kpi(
+                title: 'Best Performance',
+                value: stats['bestDay'] as String,
+                icon: Icons.star_outline,
+                iconColor: AppColors.warning,
+                valueColor: AppColors.warning,
+              )),
+              const SizedBox(width: AppTheme.spacing16),
+              Expanded(child: PremiumCard.kpi(
+                title: 'Success Rate',
+                value: '${stats['successRate'].toStringAsFixed(0)}%',
+                icon: Icons.verified_outlined,
+                iconColor: (stats['successRate'] as double) > 70 ? AppColors.success : AppColors.warning,
+                valueColor: (stats['successRate'] as double) > 70 ? AppColors.success : AppColors.warning,
+              )),
             ],
           );
         }
