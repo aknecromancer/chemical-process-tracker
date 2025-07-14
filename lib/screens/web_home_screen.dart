@@ -7,6 +7,7 @@ import '../services/calculation_engine.dart';
 import 'web_batch_entry_screen.dart';
 import 'settings_screen.dart';
 import 'batch_history_screen.dart';
+import '../widgets/analytics_dashboard.dart';
 
 class WebHomeScreen extends StatefulWidget {
   const WebHomeScreen({super.key});
@@ -175,8 +176,8 @@ class _DashboardTabState extends State<DashboardTab> {
                     _buildTodaysBatchSection(),
                     const SizedBox(height: 24),
 
-                    // Quick Stats
-                    _buildQuickStats(),
+                    // Analytics Dashboard
+                    AnalyticsDashboard(batches: recentBatches),
                     const SizedBox(height: 24),
 
                     // Recent Batches
@@ -289,53 +290,6 @@ class _DashboardTabState extends State<DashboardTab> {
     );
   }
 
-  Widget _buildQuickStats() {
-    if (recentBatches.isEmpty) return const SizedBox.shrink();
-
-    final totalBatches = recentBatches.length;
-    final profitableBatches = recentBatches.where((b) => b.isProfitable).length;
-    final avgEfficiency = recentBatches.isEmpty 
-        ? 0.0 
-        : recentBatches.map((b) => b.pdEfficiency).reduce((a, b) => a + b) / recentBatches.length;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Stats (Recent 5 Batches)',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'Total Batches',
-                totalBatches.toString(),
-                Colors.blue,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'Profitable',
-                profitableBatches.toString(),
-                Colors.green,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'Avg Efficiency',
-                '${avgEfficiency.toStringAsFixed(1)}%',
-                Colors.orange,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 
   Widget _buildRecentBatches() {
     if (recentBatches.isEmpty) {

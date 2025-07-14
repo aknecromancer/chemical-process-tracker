@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:html' as html;
+import 'dart:convert';
+import 'package:csv/csv.dart';
 import '../models/production_batch.dart';
 import '../services/web_storage_service.dart';
 import 'web_batch_entry_screen.dart';
@@ -771,10 +774,262 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
   }
 
   Future<void> _exportData() async {
-    // This would export filtered batches to CSV
-    // For now, show a placeholder
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('CSV export feature coming soon!')),
+    if (filteredBatches.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No data to export')),
+      );
+      return;
+    }
+
+    try {
+      // Show export options dialog
+      final exportOptions = await _showExportOptionsDialog();
+      if (exportOptions == null) return;
+
+      // Generate CSV data
+      final csvData = _generateCSVData(exportOptions);
+      
+      // Create filename with timestamp and filters
+      final timestamp = DateFormat('yyyy-MM-dd_HH-mm').format(DateTime.now());
+      final filterInfo = _getFilterInfo();
+      final filename = 'chemical_process_batches_${timestamp}_$filterInfo.csv';
+      
+      // Download file
+      _downloadCSV(csvData, filename);
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exported ${filteredBatches.length} batches to $filename'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
+  }
+
+  Future<Map<String, bool>?> _showExportOptionsDialog() async {
+    final Map<String, bool> options = {
+      'basicInfo': true,
+      'financials': true,
+      'efficiency': true,
+      'timestamps': false,
+      'detailedBreakdown': false,
+    };
+
+    return await showDialog<Map<String, bool>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Export Options'),
+          content: SizedBox(
+            width: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Select data to include in export (${filteredBatches.length} batches)',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                
+                CheckboxListTile(
+                  title: const Text('Basic Info'),
+                  subtitle: const Text('Date, Status, Day of Week'),
+                  value: options['basicInfo'],
+                  onChanged: (value) {
+                    setDialogState(() => options['basicInfo'] = value ?? false);
+                  },
+                ),
+                
+                CheckboxListTile(
+                  title: const Text('Financial Data'),
+                  subtitle: const Text('P&L, Income, Expenses'),
+                  value: options['financials'],
+                  onChanged: (value) {
+                    setDialogState(() => options['financials'] = value ?? false);
+                  },
+                ),
+                
+                CheckboxListTile(
+                  title: const Text('Efficiency Metrics'),
+                  subtitle: const Text('PD Efficiency, Profitability'),
+                  value: options['efficiency'],
+                  onChanged: (value) {
+                    setDialogState(() => options['efficiency'] = value ?? false);
+                  },
+                ),
+                
+                CheckboxListTile(
+                  title: const Text('Timestamps'),
+                  subtitle: const Text('Created/Updated dates'),
+                  value: options['timestamps'],
+                  onChanged: (value) {
+                    setDialogState(() => options['timestamps'] = value ?? false);
+                  },
+                ),
+                
+                CheckboxListTile(
+                  title: const Text('Detailed Breakdown'),
+                  subtitle: const Text('Raw/Derived Materials, Products'),
+                  value: options['detailedBreakdown'],
+                  onChanged: (value) {
+                    setDialogState(() => options['detailedBreakdown'] = value ?? false);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(options),
+              child: const Text('Export CSV'),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  List<List<String>> _generateCSVData(Map<String, bool> options) {
+    final List<List<String>> csvData = [];
+    
+    // Generate headers
+    final headers = <String>[];
+    
+    if (options['basicInfo'] == true) {
+      headers.addAll(['Date', 'Day of Week', 'Status']);
+    }
+    
+    if (options['financials'] == true) {
+      headers.addAll([
+        'Net P&L (₹)',
+        'Total Income (₹)', 
+        'Total Expenses (₹)',
+        'Product Income (₹)',
+        'Byproduct Income (₹)',
+        'Raw Materials (₹)',
+        'Derived Materials (₹)',
+        'Profit Margin (%)',
+      ]);
+    }
+    
+    if (options['efficiency'] == true) {
+      headers.addAll([
+        'PD Efficiency (%)',
+        'Is Profitable',
+        'Profit Status',
+      ]);
+    }
+    
+    if (options['timestamps'] == true) {
+      headers.addAll(['Created At', 'Updated At']);
+    }
+    
+    if (options['detailedBreakdown'] == true) {
+      headers.addAll([
+        'Material Count',
+        'Raw Material Count',
+        'Derived Material Count', 
+        'Product Count',
+        'Byproduct Count',
+      ]);
+    }
+    
+    csvData.add(headers);
+    
+    // Generate data rows
+    for (final batch in filteredBatches) {
+      final row = <String>[];
+      
+      if (options['basicInfo'] == true) {
+        row.addAll([
+          batch.dateDisplayString,
+          DateFormat('EEEE').format(batch.date),
+          batch.statusDisplayName,
+        ]);
+      }
+      
+      if (options['financials'] == true) {
+        row.addAll([
+          batch.netPnL.toStringAsFixed(2),
+          batch.totalIncome.toStringAsFixed(2),
+          batch.totalExpenses.toStringAsFixed(2),
+          batch.totalProductIncome.toStringAsFixed(2),
+          batch.totalByproductIncome.toStringAsFixed(2),
+          batch.totalRawMaterials.toStringAsFixed(2),
+          batch.totalDerivedMaterials.toStringAsFixed(2),
+          batch.profitMargin.toStringAsFixed(2),
+        ]);
+      }
+      
+      if (options['efficiency'] == true) {
+        row.addAll([
+          batch.pdEfficiency.toStringAsFixed(2),
+          batch.isProfitable ? 'Yes' : 'No',
+          batch.isProfitable ? 'Profit' : batch.isLoss ? 'Loss' : 'Breakeven',
+        ]);
+      }
+      
+      if (options['timestamps'] == true) {
+        row.addAll([
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(batch.createdAt),
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(batch.updatedAt),
+        ]);
+      }
+      
+      if (options['detailedBreakdown'] == true) {
+        row.addAll([
+          batch.materialCount.toString(),
+          batch.rawMaterials.length.toString(),
+          batch.derivedMaterials.length.toString(),
+          batch.products.length.toString(),
+          batch.byproducts.length.toString(),
+        ]);
+      }
+      
+      csvData.add(row);
+    }
+    
+    return csvData;
+  }
+
+  String _getFilterInfo() {
+    final filterParts = <String>[];
+    
+    if (searchQuery.isNotEmpty) filterParts.add('search');
+    if (startDate != null || endDate != null) filterParts.add('datefilter');
+    if (statusFilter != null) filterParts.add(statusFilter!.name);
+    if (showProfitableOnly) filterParts.add('profitable');
+    
+    if (filterParts.isEmpty) return 'all';
+    return filterParts.join('-');
+  }
+
+  void _downloadCSV(List<List<String>> csvData, String filename) {
+    // Convert to CSV string
+    final csvString = const ListToCsvConverter().convert(csvData);
+    
+    // Create blob and download
+    final bytes = utf8.encode(csvString);
+    final blob = html.Blob([bytes], 'text/csv');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', filename)
+      ..click();
+    
+    html.Url.revokeObjectUrl(url);
   }
 }
