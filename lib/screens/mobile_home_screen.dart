@@ -337,9 +337,9 @@ class _MobileDashboardTabState extends State<MobileDashboardTab> {
               children: [
                 Expanded(
                   child: _buildActionCard(
-                    title: 'New Batch',
-                    subtitle: 'Start new entry',
-                    icon: Icons.add_circle_outline,
+                    title: 'Today\'s Batch',
+                    subtitle: 'Start today\'s entry',
+                    icon: Icons.today_outlined,
                     color: AppColors.primaryBlue,
                     onTap: () => _navigateToNewBatch(),
                   ),
@@ -347,11 +347,11 @@ class _MobileDashboardTabState extends State<MobileDashboardTab> {
                 const SizedBox(width: AppTheme.spacing12),
                 Expanded(
                   child: _buildActionCard(
-                    title: 'Analytics',
-                    subtitle: 'Business insights',
-                    icon: Icons.analytics_outlined,
+                    title: 'Select Date',
+                    subtitle: 'Custom date entry',
+                    icon: Icons.calendar_today_outlined,
                     color: AppColors.info,
-                    onTap: () => _navigateToAnalytics(),
+                    onTap: () => _navigateToCustomDateBatch(),
                   ),
                 ),
               ],
@@ -602,6 +602,27 @@ class _MobileDashboardTabState extends State<MobileDashboardTab> {
         builder: (context) => MobileBatchEntryScreen(date: DateTime.now()),
       ),
     );
+  }
+
+  void _navigateToCustomDateBatch() async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      helpText: 'Select batch date',
+      cancelText: 'Cancel',
+      confirmText: 'Create Batch',
+    );
+    
+    if (selectedDate != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MobileBatchEntryScreen(date: selectedDate),
+        ),
+      );
+    }
   }
 
   void _navigateToHistory() {

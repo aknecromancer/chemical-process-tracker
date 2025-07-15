@@ -36,10 +36,12 @@ class _MobileBatchEntryScreenState extends State<MobileBatchEntryScreen>
   List<Map<String, dynamic>> _manualEntries = [];
   
   bool _isLoading = true;
+  late DateTime _selectedDate;
 
   @override
   void initState() {
     super.initState();
+    _selectedDate = widget.date;
     _tabController = TabController(length: 3, vsync: this);
     _loadDefaults();
   }
@@ -70,7 +72,7 @@ class _MobileBatchEntryScreenState extends State<MobileBatchEntryScreen>
   
   Future<void> _loadExistingBatch() async {
     try {
-      final existingBatch = await PlatformStorageService.getBatchByDate(widget.date);
+      final existingBatch = await PlatformStorageService.getBatchByDate(_selectedDate);
       if (existingBatch != null) {
         setState(() {
           _pattiQuantity = existingBatch.pattiQuantity;
@@ -132,7 +134,7 @@ class _MobileBatchEntryScreenState extends State<MobileBatchEntryScreen>
 
     try {
       final batch = ProductionBatch(
-        date: widget.date,
+        date: _selectedDate,
         pattiQuantity: _pattiQuantity,
         pattiRate: _pattiRate,
         pdQuantity: _pdQuantity,
@@ -221,10 +223,29 @@ class _MobileBatchEntryScreenState extends State<MobileBatchEntryScreen>
                 color: AppColors.textPrimary,
               ),
             ),
-            Text(
-              dateFormat.format(widget.date),
-              style: AppTheme.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+            GestureDetector(
+              onTap: _showDatePicker,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    size: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: AppTheme.spacing4),
+                  Text(
+                    dateFormat.format(_selectedDate),
+                    style: AppTheme.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: AppTheme.spacing4),
+                  Icon(
+                    Icons.edit,
+                    size: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
               ),
             ),
           ],
@@ -232,6 +253,14 @@ class _MobileBatchEntryScreenState extends State<MobileBatchEntryScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          IconButton(
+            onPressed: _showDatePicker,
+            icon: Icon(
+              Icons.calendar_month,
+              color: AppColors.textSecondary,
+            ),
+            tooltip: 'Change Date',
+          ),
           ElevatedButton.icon(
             onPressed: _saveBatch,
             style: ElevatedButton.styleFrom(
@@ -1231,5 +1260,25 @@ class _MobileBatchEntryScreenState extends State<MobileBatchEntryScreen>
         ],
       ),
     );
+  }
+
+  void _showDatePicker() async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      helpText: 'Select batch date',
+      cancelText: 'Cancel',
+      confirmText: 'Select',
+    );
+    
+    if (selectedDate != null && selectedDate != _selectedDate) {
+      setState(() {
+        _selectedDate = selectedDate;
+      });
+      // Reload data for the new date
+      await _loadExistingBatch();
+    }
   }
 }
