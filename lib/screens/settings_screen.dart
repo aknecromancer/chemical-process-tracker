@@ -665,18 +665,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: AppTheme.spacing12),
             
-            Row(
+            Column(
               children: [
-                Expanded(
-                  child: _buildRateField('PD Rate', _pdRateController, '12000'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildEnhancedRateField('PD Rate', _pdRateController, '12000', Icons.inventory),
+                    ),
+                    const SizedBox(width: AppTheme.spacing12),
+                    Expanded(
+                      child: _buildEnhancedRateField('CU Rate', _cuRateController, '600', Icons.money),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: AppTheme.spacing16),
-                Expanded(
-                  child: _buildRateField('CU Rate', _cuRateController, '600'),
-                ),
-                const SizedBox(width: AppTheme.spacing16),
-                Expanded(
-                  child: _buildRateField('TIN Rate', _tinRateController, '38'),
+                const SizedBox(height: AppTheme.spacing12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildEnhancedRateField('TIN Rate', _tinRateController, '38', Icons.build),
+                    ),
+                    const SizedBox(width: AppTheme.spacing12),
+                    Expanded(child: Container()), // Empty space for alignment
+                  ],
                 ),
               ],
             ),
@@ -692,17 +702,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: AppTheme.spacing12),
             
-            Row(
+            Column(
               children: [
-                Expanded(
-                  child: _buildRateField('Nitric Rate', _nitricRateController, '26'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildEnhancedRateField('Nitric Rate', _nitricRateController, '26', Icons.science),
+                    ),
+                    const SizedBox(width: AppTheme.spacing12),
+                    Expanded(
+                      child: _buildEnhancedRateField('HCL Rate', _hclRateController, '1.7', Icons.water_drop),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: AppTheme.spacing16),
-                Expanded(
-                  child: _buildRateField('HCL Rate', _hclRateController, '1.7'),
-                ),
-                const SizedBox(width: AppTheme.spacing16),
-                Expanded(child: Container()), // Empty space for alignment
               ],
             ),
           ],
@@ -721,6 +733,110 @@ class _SettingsScreenState extends State<SettingsScreen> {
         isDense: true,
       ),
       keyboardType: TextInputType.number,
+    );
+  }
+
+  Widget _buildEnhancedRateField(String label, TextEditingController controller, String placeholder, IconData icon) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with icon and label
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spacing12),
+            decoration: BoxDecoration(
+              color: AppColors.neutral100,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(AppTheme.borderRadius8),
+                topRight: Radius.circular(AppTheme.borderRadius8),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  color: AppColors.primaryBlue,
+                  size: 20,
+                ),
+                const SizedBox(width: AppTheme.spacing8),
+                Text(
+                  label,
+                  style: AppTheme.labelMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Input field
+          Padding(
+            padding: const EdgeInsets.all(AppTheme.spacing12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Rate (₹/kg)',
+                  style: AppTheme.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacing8),
+                Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundPrimary,
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: TextFormField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    style: AppTheme.titleMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryBlue,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: placeholder,
+                      hintStyle: AppTheme.bodyMedium.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.spacing12,
+                        vertical: AppTheme.spacing12,
+                      ),
+                      suffixIcon: Container(
+                        margin: const EdgeInsets.all(AppTheme.spacing4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacing8,
+                          vertical: AppTheme.spacing4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppTheme.borderRadius4),
+                        ),
+                        child: Text(
+                          '₹/kg',
+                          style: AppTheme.bodySmall.copyWith(
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

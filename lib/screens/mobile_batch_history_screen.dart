@@ -19,9 +19,10 @@ class _MobileBatchHistoryScreenState extends State<MobileBatchHistoryScreen> {
   List<ProductionBatch> _filteredBatches = [];
   bool _isLoading = true;
   String _searchQuery = '';
-  String _sortBy = 'date'; // 'date', 'profit', 'quantity'
+  String _sortBy = 'date'; // 'date', 'profit', 'quantity', 'efficiency'
   bool _sortAscending = false;
   DateTimeRange? _dateRange;
+  String _statusFilter = 'all'; // 'all', 'draft', 'complete', 'profitable'
 
   @override
   void initState() {
@@ -61,6 +62,22 @@ class _MobileBatchHistoryScreenState extends State<MobileBatchHistoryScreen> {
       }).toList();
     }
     
+    // Apply status filter
+    if (_statusFilter != 'all') {
+      filtered = filtered.where((batch) {
+        switch (_statusFilter) {
+          case 'draft':
+            return _isDraftBatch(batch);
+          case 'complete':
+            return !_isDraftBatch(batch);
+          case 'profitable':
+            return batch.calculationResult != null && batch.calculationResult!.finalProfitLoss > 0;
+          default:
+            return true;
+        }
+      }).toList();
+    }
+    
     // Apply date range filter
     if (_dateRange != null) {
       filtered = filtered.where((batch) {
@@ -83,6 +100,13 @@ class _MobileBatchHistoryScreenState extends State<MobileBatchHistoryScreen> {
           break;
         case 'quantity':
           comparison = a.pattiQuantity.compareTo(b.pattiQuantity);
+          break;
+        case 'efficiency':
+          final aEfficiency = (a.pdQuantity != null && a.pdQuantity! > 0) 
+              ? (a.pdQuantity! / a.pattiQuantity) * 100 : 0;
+          final bEfficiency = (b.pdQuantity != null && b.pdQuantity! > 0) 
+              ? (b.pdQuantity! / b.pattiQuantity) * 100 : 0;
+          comparison = aEfficiency.compareTo(bEfficiency);
           break;
       }
       return _sortAscending ? comparison : -comparison;
@@ -219,6 +243,12 @@ class _MobileBatchHistoryScreenState extends State<MobileBatchHistoryScreen> {
                 _dateRange == null ? 'Date Range' : 'Custom Range',
                 Icons.date_range,
                 _showDateRangeDialog,
+              ),
+              const SizedBox(width: AppTheme.spacing8),
+              _buildFilterChip(
+                _getStatusFilterLabel(),
+                Icons.filter_alt,
+                _showStatusFilterDialog,
               ),
               const Spacer(),
               Text(
@@ -445,6 +475,8 @@ class _MobileBatchHistoryScreenState extends State<MobileBatchHistoryScreen> {
         return 'P&L';
       case 'quantity':
         return 'Quantity';
+      case 'efficiency':
+        return 'Efficiency';
       default:
         return 'Date';
     }
@@ -494,6 +526,18 @@ class _MobileBatchHistoryScreenState extends State<MobileBatchHistoryScreen> {
                 Navigator.pop(context);
               },
             ),
+            ListTile(
+              title: const Text('Efficiency'),
+              trailing: _sortBy == 'efficiency' ? const Icon(Icons.check) : null,
+              onTap: () {
+                setState(() {
+                  _sortBy = 'efficiency';
+                  _sortAscending = false;
+                });
+                _applyFilters();
+                Navigator.pop(context);
+              },
+            ),
           ],
         ),
       ),
@@ -532,6 +576,7 @@ class _MobileBatchHistoryScreenState extends State<MobileBatchHistoryScreen> {
                   _dateRange = null;
                   _sortBy = 'date';
                   _sortAscending = false;
+                  _statusFilter = 'all';
                 });
                 _applyFilters();
                 Navigator.pop(context);
@@ -551,6 +596,14 @@ class _MobileBatchHistoryScreenState extends State<MobileBatchHistoryScreen> {
               onTap: () {
                 Navigator.pop(context);
                 _showDateRangeDialog();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.filter_alt),
+              title: const Text('Status Filter'),
+              onTap: () {
+                Navigator.pop(context);
+                _showStatusFilterDialog();
               },
             ),
           ],
@@ -670,5 +723,76 @@ class _MobileBatchHistoryScreenState extends State<MobileBatchHistoryScreen> {
         }
       }
     }
+  }
+
+  String _getStatusFilterLabel() {
+    switch (_statusFilter) {
+      case 'draft':
+        return 'Draft Only';
+      case 'complete':
+        return 'Complete Only';
+      case 'profitable':
+        return 'Profitable Only';
+      default:
+        return 'All Status';
+    }
+  }
+
+  void _showStatusFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Filter by Status'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('All Status'),
+              trailing: _statusFilter == 'all' ? const Icon(Icons.check) : null,
+              onTap: () {
+                setState(() {
+                  _statusFilter = 'all';
+                });
+                _applyFilters();
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('Draft Only'),
+              trailing: _statusFilter == 'draft' ? const Icon(Icons.check) : null,
+              onTap: () {
+                setState(() {
+                  _statusFilter = 'draft';
+                });
+                _applyFilters();
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('Complete Only'),
+              trailing: _statusFilter == 'complete' ? const Icon(Icons.check) : null,
+              onTap: () {
+                setState(() {
+                  _statusFilter = 'complete';
+                });
+                _applyFilters();
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('Profitable Only'),
+              trailing: _statusFilter == 'profitable' ? const Icon(Icons.check) : null,
+              onTap: () {
+                setState(() {
+                  _statusFilter = 'profitable';
+                });
+                _applyFilters();
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

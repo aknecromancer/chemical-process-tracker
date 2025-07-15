@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../widgets/premium_card.dart';
 import 'mobile_batch_entry_screen.dart';
 import 'mobile_batch_history_screen.dart';
+import 'mobile_analytics_screen.dart';
 import 'settings_screen.dart';
 
 class MobileHomeScreen extends StatefulWidget {
@@ -622,11 +623,10 @@ class _MobileDashboardTabState extends State<MobileDashboardTab> {
   }
 
   void _navigateToAnalytics() {
-    // TODO: Implement analytics screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Analytics feature coming soon!'),
-        backgroundColor: AppColors.info,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const MobileAnalyticsScreen(),
       ),
     );
   }
