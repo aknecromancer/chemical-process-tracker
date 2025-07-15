@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:html' as html;
+import 'package:flutter/foundation.dart';
 import 'screens/web_home_screen.dart';
+import 'screens/mobile_home_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -21,7 +22,7 @@ class ChemicalProcessTrackerApp extends StatelessWidget {
     return MaterialApp(
       title: 'Chemical Process Tracker - Enterprise Edition',
       theme: AppTheme.lightTheme,
-      home: const WebHomeScreen(),
+      home: kIsWeb ? const WebHomeScreen() : const MobileHomeScreen(),
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
         return MediaQuery(

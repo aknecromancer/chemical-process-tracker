@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../services/web_storage_service.dart';
+import '../services/platform_storage_service.dart';
 import '../models/production_batch.dart';
 import '../models/configurable_defaults.dart';
 import '../services/calculation_engine.dart';
@@ -99,10 +99,10 @@ class _DashboardTabState extends State<DashboardTab> {
       final today = DateTime.now();
       
       // Check for today's batch
-      todaysBatch = await WebStorageService.getBatchByDate(today);
+      todaysBatch = await PlatformStorageService.getBatchByDate(today);
       
       // Get all batches and sort them properly
-      final allBatches = await WebStorageService.getAllBatches();
+      final allBatches = await PlatformStorageService.getAllBatches();
       allBatches.sort((a, b) => b.date.compareTo(a.date)); // Sort by date, newest first
       
       // Take the 10 most recent batches for better visibility
@@ -126,7 +126,7 @@ class _DashboardTabState extends State<DashboardTab> {
   Future<void> _createTodaysBatch() async {
     try {
       final today = DateTime.now();
-      await WebStorageService.createBatch(today);
+      // Navigate to new batch entry - removed createBatch call as it's handled in entry screen
       await _loadData();
       
       if (mounted) {

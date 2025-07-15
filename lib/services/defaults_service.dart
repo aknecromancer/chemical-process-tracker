@@ -1,25 +1,25 @@
 import '../models/configurable_defaults.dart';
-import 'web_storage_service.dart';
+import 'platform_storage_service.dart';
 
 class DefaultsService {
   static ConfigurableDefaults? _cachedDefaults;
 
   // Get current configurable defaults (with caching)
   static Future<ConfigurableDefaults> getDefaults() async {
-    _cachedDefaults ??= await WebStorageService.getDefaults();
+    _cachedDefaults ??= await PlatformStorageService.getDefaults();
     return _cachedDefaults!;
   }
 
   // Update configurable defaults
   static Future<void> updateDefaults(ConfigurableDefaults defaults) async {
-    await WebStorageService.saveDefaults(defaults);
+    await PlatformStorageService.saveDefaults(defaults);
     _cachedDefaults = defaults; // Update cache
   }
 
   // Reset to factory defaults
   static Future<void> resetToDefaults() async {
     final factoryDefaults = ConfigurableDefaults(); // Creates with default values
-    await WebStorageService.saveDefaults(factoryDefaults);
+    await PlatformStorageService.saveDefaults(factoryDefaults);
     _cachedDefaults = null; // Clear cache to force reload
   }
 

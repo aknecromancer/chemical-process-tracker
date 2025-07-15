@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'dart:html' as html;
 import 'dart:convert';
-import '../services/web_storage_service.dart';
+import '../services/platform_storage_service.dart';
 import '../services/calculation_engine.dart';
 import '../models/configurable_defaults.dart';
 import '../models/production_batch.dart';
@@ -48,10 +47,10 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
 
   Future<void> _loadDefaults() async {
     try {
-      final defaults = await WebStorageService.getDefaults();
+      final defaults = await PlatformStorageService.getDefaults();
       setState(() {
-        _defaults = defaults;
-        _calculationEngine = AdvancedCalculationEngine(defaults);
+        _defaults = defaults ?? ConfigurableDefaults.createDefault();
+        _calculationEngine = AdvancedCalculationEngine(_defaults!);
       });
       
       // Try to load existing batch data
@@ -72,36 +71,28 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
   
   Future<void> _loadExistingBatch() async {
     try {
-      final existingBatch = await WebStorageService.getBatchByDate(widget.date);
+      final existingBatch = await PlatformStorageService.getBatchByDate(widget.date);
       if (existingBatch != null) {
-        // Load the stored values from localStorage using a more comprehensive key
-        final batchKey = 'batch_${widget.date.year}_${widget.date.month}_${widget.date.day}';
-        final storedData = html.window.localStorage[batchKey];
+        setState(() {
+          _pattiQuantity = existingBatch.pattiQuantity;
+          _pattiRate = existingBatch.pattiRate;
+          _pdQuantity = existingBatch.pdQuantity;
+          _customRates = Map<String, double>.from(existingBatch.customRates ?? {});
+          _manualEntries = List<Map<String, dynamic>>.from(existingBatch.manualEntries ?? []);
+          
+          // Update controllers
+          if (_pattiQuantity > 0) {
+            _pattiQuantityController.text = _pattiQuantity.toString();
+          }
+          if (_pattiRate > 0) {
+            _pattiRateController.text = _pattiRate.toString();
+          }
+          if (_pdQuantity != null && _pdQuantity! > 0) {
+            _pdQuantityController.text = _pdQuantity.toString();
+          }
+        });
         
-        if (storedData != null) {
-          final Map<String, dynamic> data = jsonDecode(storedData);
-          
-          setState(() {
-            _pattiQuantity = data['pattiQuantity']?.toDouble() ?? 0;
-            _pattiRate = data['pattiRate']?.toDouble() ?? 0;
-            _pdQuantity = data['pdQuantity']?.toDouble();
-            _customRates = Map<String, double>.from(data['customRates'] ?? {});
-            _manualEntries = List<Map<String, dynamic>>.from(data['manualEntries'] ?? []);
-            
-            // Update controllers
-            if (_pattiQuantity > 0) {
-              _pattiQuantityController.text = _pattiQuantity.toString();
-            }
-            if (_pattiRate > 0) {
-              _pattiRateController.text = _pattiRate.toString();
-            }
-            if (_pdQuantity != null && _pdQuantity! > 0) {
-              _pdQuantityController.text = _pdQuantity.toString();
-            }
-          });
-          
-          _recalculate();
-        }
+        _recalculate();
       }
     } catch (e) {
       print('Error loading existing batch: $e');
@@ -111,8 +102,7 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
   void _recalculate() {
     if (_calculationEngine == null) return;
 
-    // Auto-save data as user types
-    _autoSaveData();
+    // Auto-save removed - data saved via platform service
 
     // Use a timer to debounce rapid changes
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -156,22 +146,6 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
     });
   }
   
-  void _autoSaveData() {
-    try {
-      final batchKey = 'batch_${widget.date.year}_${widget.date.month}_${widget.date.day}';
-      final batchData = {
-        'pattiQuantity': _pattiQuantity,
-        'pattiRate': _pattiRate,
-        'pdQuantity': _pdQuantity,
-        'customRates': _customRates,
-        'manualEntries': _manualEntries,
-        'autoSavedAt': DateTime.now().toIso8601String(),
-      };
-      html.window.localStorage[batchKey] = jsonEncode(batchData);
-    } catch (e) {
-      print('Auto-save failed: $e');
-    }
-  }
 
   @override
   void dispose() {
@@ -1022,32 +996,19 @@ class _WebBatchEntryScreenState extends State<WebBatchEntryScreen>
         return;
       }
 
-      // Save input data to localStorage for editing later
-      final batchKey = 'batch_${widget.date.year}_${widget.date.month}_${widget.date.day}';
-      final batchData = {
-        'pattiQuantity': _pattiQuantity,
-        'pattiRate': _pattiRate,
-        'pdQuantity': _pdQuantity,
-        'customRates': _customRates,
-        'savedAt': DateTime.now().toIso8601String(),
-      };
-      html.window.localStorage[batchKey] = jsonEncode(batchData);
-
-      // Save batch summary to main storage
+      // Save batch with all data to platform storage
       final batch = ProductionBatch(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
         date: widget.date,
-        materials: [],
-        totalExpenses: _currentResult!.phase1TotalCost,
-        totalIncome: _currentResult!.pdIncome,
-        netPnL: _currentResult!.netProfit,
-        pdEfficiency: _currentResult!.pdEfficiency,
-        status: BatchStatus.completed,
+        pattiQuantity: _pattiQuantity,
+        pattiRate: _pattiRate,
+        pdQuantity: _pdQuantity,
+        customRates: _customRates,
+        manualEntries: _manualEntries,
+        calculationResult: _currentResult,
         createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
       );
 
-      await WebStorageService.saveBatch(batch);
+      await PlatformStorageService.saveBatch(batch);
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Batch saved successfully!')),

@@ -46,6 +46,61 @@ class CalculationResult {
     required this.materialCosts,
     required this.unitCosts,
   });
+
+  /// Convert to JSON for storage
+  Map<String, dynamic> toJson() {
+    return {
+      'phase1TotalCost': phase1TotalCost,
+      'pdIncome': pdIncome,
+      'cuIncome': cuIncome,
+      'tinIncome': tinIncome,
+      'tinCost': tinCost,
+      'netByproductIncome': netByproductIncome,
+      'grossProfit': grossProfit,
+      'netProfit': netProfit,
+      'pdEfficiency': pdEfficiency,
+      'materialCostPerUnit': materialCostPerUnit,
+      'chemicalCostPerUnit': chemicalCostPerUnit,
+      'otherCostPerUnit': otherCostPerUnit,
+      'profitPer100kg': profitPer100kg,
+      'costPer1kgPd': costPer1kgPd,
+      'totalCost': totalCost,
+      'pnl': pnl,
+      'phase1WithOther': phase1WithOther,
+      'isProfitNegative': isProfitNegative,
+      'materialCosts': materialCosts,
+      'unitCosts': unitCosts,
+    };
+  }
+
+  /// Create from JSON
+  factory CalculationResult.fromJson(Map<String, dynamic> json) {
+    return CalculationResult(
+      phase1TotalCost: (json['phase1TotalCost'] ?? 0).toDouble(),
+      pdIncome: (json['pdIncome'] ?? 0).toDouble(),
+      cuIncome: (json['cuIncome'] ?? 0).toDouble(),
+      tinIncome: (json['tinIncome'] ?? 0).toDouble(),
+      tinCost: (json['tinCost'] ?? 0).toDouble(),
+      netByproductIncome: (json['netByproductIncome'] ?? 0).toDouble(),
+      grossProfit: (json['grossProfit'] ?? 0).toDouble(),
+      netProfit: (json['netProfit'] ?? 0).toDouble(),
+      pdEfficiency: (json['pdEfficiency'] ?? 0).toDouble(),
+      materialCostPerUnit: (json['materialCostPerUnit'] ?? 0).toDouble(),
+      chemicalCostPerUnit: (json['chemicalCostPerUnit'] ?? 0).toDouble(),
+      otherCostPerUnit: (json['otherCostPerUnit'] ?? 0).toDouble(),
+      profitPer100kg: (json['profitPer100kg'] ?? 0).toDouble(),
+      costPer1kgPd: (json['costPer1kgPd'] ?? 0).toDouble(),
+      totalCost: (json['totalCost'] ?? 0).toDouble(),
+      pnl: (json['pnl'] ?? 0).toDouble(),
+      phase1WithOther: (json['phase1WithOther'] ?? 0).toDouble(),
+      isProfitNegative: json['isProfitNegative'] ?? false,
+      materialCosts: Map<String, double>.from(json['materialCosts'] ?? {}),
+      unitCosts: Map<String, double>.from(json['unitCosts'] ?? {}),
+    );
+  }
+
+  /// Getter for final profit/loss (commonly used)
+  double get finalProfitLoss => netProfit;
 }
 
 class MaterialInput {

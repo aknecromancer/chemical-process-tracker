@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'dart:html' as html;
 import 'dart:convert';
 import 'package:csv/csv.dart';
 import '../models/production_batch.dart';
-import '../services/web_storage_service.dart';
+import '../services/platform_storage_service.dart';
+import '../utils/web_utils.dart' as web_utils;
 import 'web_batch_entry_screen.dart';
 
 class BatchHistoryScreen extends StatefulWidget {
@@ -36,7 +36,7 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
     setState(() => isLoading = true);
     
     try {
-      final batches = await WebStorageService.getAllBatches();
+      final batches = await PlatformStorageService.getAllBatches();
       setState(() {
         allBatches = batches;
         _applyFilters();
@@ -719,7 +719,7 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
   Future<void> _duplicateBatch(ProductionBatch batch) async {
     try {
       final today = DateTime.now();
-      final existingBatch = await WebStorageService.getBatchByDate(today);
+      final existingBatch = await PlatformStorageService.getBatchByDate(today);
       
       if (existingBatch != null) {
         final confirmed = await showDialog<bool>(
@@ -744,9 +744,8 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
         if (confirmed != true) return;
       }
       
-      // Create new batch with today's date but batch's data
-      await WebStorageService.createBatch(today);
-      final newBatch = await WebStorageService.getBatchByDate(today);
+      // Create new batch with today's date but batch's data - handled in entry screen
+      final newBatch = existingBatch;
       
       if (newBatch != null) {
         // Copy materials from the selected batch
@@ -1021,15 +1020,7 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
     // Convert to CSV string
     final csvString = const ListToCsvConverter().convert(csvData);
     
-    // Create blob and download
-    final bytes = utf8.encode(csvString);
-    final blob = html.Blob([bytes], 'text/csv');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute('download', filename)
-      ..click();
-    
-    html.Url.revokeObjectUrl(url);
+    // Use platform-specific download
+    web_utils.downloadCSV(csvString, filename);
   }
 }

@@ -206,4 +206,52 @@ class ConfigurableDefaults {
       updatedAt: DateTime.now(),
     );
   }
+
+  /// Convert to JSON for storage
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'workerFixedAmount': workerFixedAmount,
+      'rentFixedAmount': rentFixedAmount,
+      'accountFixedAmount': accountFixedAmount,
+      'fixedDenominator': fixedDenominator,
+      'cuPercentage': cuPercentage,
+      'tinNumerator': tinNumerator,
+      'tinDenominator': tinDenominator,
+      'defaultPdRate': defaultPdRate,
+      'defaultCuRate': defaultCuRate,
+      'defaultTinRate': defaultTinRate,
+      'defaultOtherRate': defaultOtherRate,
+      'defaultNitricRate': defaultNitricRate,
+      'defaultHclRate': defaultHclRate,
+      'createdAt': createdAt.millisecondsSinceEpoch,
+      'updatedAt': updatedAt.millisecondsSinceEpoch,
+    };
+  }
+
+  /// Create from JSON
+  factory ConfigurableDefaults.fromJson(Map<String, dynamic> json) {
+    return ConfigurableDefaults(
+      id: json['id'],
+      workerFixedAmount: (json['workerFixedAmount'] ?? 38000).toDouble(),
+      rentFixedAmount: (json['rentFixedAmount'] ?? 25000).toDouble(),
+      accountFixedAmount: (json['accountFixedAmount'] ?? 5000).toDouble(),
+      fixedDenominator: (json['fixedDenominator'] ?? 4500).toDouble(),
+      cuPercentage: (json['cuPercentage'] ?? 10.0).toDouble(),
+      tinNumerator: (json['tinNumerator'] ?? 11).toDouble(),
+      tinDenominator: (json['tinDenominator'] ?? 30).toDouble(),
+      defaultPdRate: (json['defaultPdRate'] ?? 12000).toDouble(),
+      defaultCuRate: (json['defaultCuRate'] ?? 600).toDouble(),
+      defaultTinRate: (json['defaultTinRate'] ?? 38).toDouble(),
+      defaultOtherRate: (json['defaultOtherRate'] ?? 4).toDouble(),
+      defaultNitricRate: (json['defaultNitricRate'] ?? 26).toDouble(),
+      defaultHclRate: (json['defaultHclRate'] ?? 1.7).toDouble(),
+      createdAt: json['createdAt'] != null 
+          ? DateTime.fromMillisecondsSinceEpoch(json['createdAt'])
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['updatedAt'])
+          : DateTime.now(),
+    );
+  }
 }

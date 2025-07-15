@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/configurable_defaults.dart';
-import '../services/defaults_service.dart';
+import '../services/platform_storage_service.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
+import '../widgets/premium_card.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -40,9 +43,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadDefaults() async {
     try {
-      final defaults = await DefaultsService.getDefaults();
+      final defaults = await PlatformStorageService.getDefaults();
       setState(() {
-        _defaults = defaults;
+        _defaults = defaults ?? ConfigurableDefaults.createDefault();
         _populateControllers();
         _isLoading = false;
       });
@@ -106,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         updatedAt: DateTime.now(),
       );
       
-      await DefaultsService.updateDefaults(updatedDefaults);
+      await PlatformStorageService.saveDefaults(updatedDefaults);
       
       setState(() {
         _defaults = updatedDefaults;
@@ -154,7 +157,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirmed == true) {
       setState(() => _isSaving = true);
       try {
-        await DefaultsService.resetToDefaults();
+        final factoryDefaults = ConfigurableDefaults.createDefault();
+        await PlatformStorageService.saveDefaults(factoryDefaults);
         await _loadDefaults();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -195,46 +199,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.backgroundGradientStart,
+                AppColors.backgroundGradientEnd,
+              ],
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  color: AppColors.primaryBlue,
+                  strokeWidth: 3,
+                ),
+                const SizedBox(height: AppTheme.spacing16),
+                Text(
+                  'Loading Settings...',
+                  style: AppTheme.titleMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings & Defaults'),
+        title: Text(
+          'Settings',
+          style: AppTheme.titleLarge.copyWith(
+            color: AppColors.textPrimary,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           TextButton.icon(
             onPressed: _isSaving ? null : _resetToDefaults,
-            icon: const Icon(Icons.restore),
-            label: const Text('Reset'),
+            icon: Icon(Icons.restore, color: AppColors.textSecondary),
+            label: Text(
+              'Reset',
+              style: AppTheme.labelMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppTheme.spacing8),
           ElevatedButton.icon(
             onPressed: _isSaving ? null : _saveSettings,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              foregroundColor: Colors.white,
+              elevation: 2,
+            ),
             icon: _isSaving 
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
-                : const Icon(Icons.save),
+                : const Icon(Icons.save, size: 20),
             label: Text(_isSaving ? 'Saving...' : 'Save'),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppTheme.spacing16),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildRateCalculationsSection(),
-            const SizedBox(height: 24),
-            _buildByproductFormulasSection(),
-            const SizedBox(height: 24),
-            _buildDefaultRatesSection(),
-          ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.backgroundGradientStart,
+              AppColors.backgroundGradientEnd,
+            ],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppTheme.spacing16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDefaultRatesSection(),
+              const SizedBox(height: AppTheme.spacing24),
+              _buildRateCalculationsSection(),
+              const SizedBox(height: AppTheme.spacing24),
+              _buildByproductFormulasSection(),
+            ],
+          ),
         ),
       ),
     );
@@ -243,26 +308,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildRateCalculationsSection() {
     if (_defaults == null) return const SizedBox();
     
-    return Card(
+    return PremiumCard(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppTheme.spacing16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Rate Calculations',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spacing8),
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
+                  ),
+                  child: Icon(
+                    Icons.calculate_outlined,
+                    color: AppColors.info,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacing12),
+                Text(
+                  'Rate Calculator',
+                  style: AppTheme.headlineSmall,
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppTheme.spacing8),
             Text(
               'Configure the formula components for Worker, Rent, and Account rates',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+              style: AppTheme.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.spacing16),
             
             // Fixed Denominator
             Row(
@@ -354,7 +434,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 keyboardType: TextInputType.number,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: AppTheme.spacing16),
             Expanded(
               flex: 2,
               child: Container(
@@ -381,26 +461,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildByproductFormulasSection() {
     if (_defaults == null) return const SizedBox();
     
-    return Card(
+    return PremiumCard(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppTheme.spacing16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Byproduct Formulas',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spacing8),
+                  decoration: BoxDecoration(
+                    color: AppColors.byproduct.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
+                  ),
+                  child: Icon(
+                    Icons.recycling_outlined,
+                    color: AppColors.byproduct,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacing12),
+                Text(
+                  'Byproduct Formulas',
+                  style: AppTheme.headlineSmall,
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppTheme.spacing8),
             Text(
               'Configure quantity calculations for CU and TIN materials',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+              style: AppTheme.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.spacing16),
             
             // CU Formula
             Text(
@@ -432,7 +527,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     keyboardType: TextInputType.number,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppTheme.spacing16),
                 Expanded(
                   flex: 2,
                   child: Container(
@@ -497,7 +592,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     keyboardType: TextInputType.number,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppTheme.spacing16),
                 Expanded(
                   flex: 2,
                   child: Container(
@@ -524,72 +619,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildDefaultRatesSection() {
-    return Card(
+    return PremiumCard(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppTheme.spacing16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Default Material Rates',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spacing8),
+                  decoration: BoxDecoration(
+                    color: AppColors.rawMaterial.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
+                  ),
+                  child: Icon(
+                    Icons.inventory_2_outlined,
+                    color: AppColors.rawMaterial,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacing12),
+                Text(
+                  'Default Material Rates',
+                  style: AppTheme.headlineSmall,
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppTheme.spacing8),
             Text(
               'Set default rates that will be used for all new batches (can be overridden per batch)',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+              style: AppTheme.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.spacing16),
             
             // Product Rates
             Text(
               'Product Rates',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: AppTheme.titleMedium.copyWith(
                 fontWeight: FontWeight.w600,
+                color: AppColors.product,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTheme.spacing12),
             
             Row(
               children: [
                 Expanded(
                   child: _buildRateField('PD Rate', _pdRateController, '12000'),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppTheme.spacing16),
                 Expanded(
                   child: _buildRateField('CU Rate', _cuRateController, '600'),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppTheme.spacing16),
                 Expanded(
                   child: _buildRateField('TIN Rate', _tinRateController, '38'),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppTheme.spacing20),
             
             // Chemical Rates
             Text(
               'Chemical Rates',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: AppTheme.titleMedium.copyWith(
                 fontWeight: FontWeight.w600,
+                color: AppColors.derivedMaterial,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTheme.spacing12),
             
             Row(
               children: [
                 Expanded(
                   child: _buildRateField('Nitric Rate', _nitricRateController, '26'),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppTheme.spacing16),
                 Expanded(
                   child: _buildRateField('HCL Rate', _hclRateController, '1.7'),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppTheme.spacing16),
                 Expanded(child: Container()), // Empty space for alignment
               ],
             ),
