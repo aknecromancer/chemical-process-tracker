@@ -337,8 +337,8 @@ class _MobileDashboardTabState extends State<MobileDashboardTab> {
               children: [
                 Expanded(
                   child: _buildActionCard(
-                    title: 'Today\'s Batch',
-                    subtitle: 'Start today\'s entry',
+                    title: 'Today\'s Entry',
+                    subtitle: 'Start today\'s batch',
                     icon: Icons.today_outlined,
                     color: AppColors.primaryBlue,
                     onTap: () => _navigateToNewBatch(),
