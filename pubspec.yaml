@@ -57,6 +57,17 @@ dependencies:
   csv: ^5.0.2
   provider: ^6.1.5
   shared_preferences: ^2.5.3
+  
+  # Supabase for cloud database
+  supabase_flutter: ^2.7.0
+  
+  # Network connectivity
+  connectivity_plus: ^6.0.5
+  
+  # Additional utilities for export
+  pdf: ^3.11.1
+  excel: ^4.0.6
+  share_plus: ^10.0.2
 
 dev_dependencies:
   flutter_test:

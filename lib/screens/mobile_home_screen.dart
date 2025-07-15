@@ -5,6 +5,7 @@ import '../models/production_batch.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_card.dart';
+import '../utils/status_bar_utils.dart';
 import 'mobile_batch_entry_screen.dart';
 import 'mobile_batch_history_screen.dart';
 import 'mobile_analytics_screen.dart';
@@ -44,6 +45,9 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
       const MobileBatchHistoryScreen(),
       const SettingsScreen(),
     ];
+
+    // Ensure consistent status bar appearance
+    StatusBarUtils.applyPrimaryStyle();
 
     return Scaffold(
       body: PageView(

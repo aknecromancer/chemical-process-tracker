@@ -475,8 +475,17 @@ class AppTheme {
     );
   }
 
-  /// System UI Overlay Style for Status Bar
+  /// System UI Overlay Style for Status Bar - Enhanced Visibility
   static const SystemUiOverlayStyle lightSystemUiOverlay = SystemUiOverlayStyle(
+    statusBarColor: Color(0xFF1565C0), // Primary blue for better contrast
+    statusBarIconBrightness: Brightness.light, // Light icons on dark background
+    statusBarBrightness: Brightness.dark, // Dark status bar background
+    systemNavigationBarColor: Colors.white,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  );
+
+  /// Alternative transparent overlay for specific screens
+  static const SystemUiOverlayStyle transparentSystemUiOverlay = SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
     statusBarBrightness: Brightness.light,

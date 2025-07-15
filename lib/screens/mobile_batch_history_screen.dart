@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/platform_storage_service.dart';
+import '../services/export_service.dart';
 import '../models/production_batch.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_colors.dart';
@@ -130,6 +131,13 @@ class _MobileBatchHistoryScreenState extends State<MobileBatchHistoryScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          IconButton(
+            onPressed: _showExportDialog,
+            icon: Icon(
+              Icons.download,
+              color: AppColors.textSecondary,
+            ),
+          ),
           IconButton(
             onPressed: _showFilterDialog,
             icon: Icon(
@@ -794,5 +802,241 @@ class _MobileBatchHistoryScreenState extends State<MobileBatchHistoryScreen> {
         ),
       ),
     );
+  }
+
+  /// Show export dialog
+  void _showExportDialog() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(AppTheme.spacing16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Export Batch Data',
+              style: AppTheme.titleMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacing16),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(AppTheme.spacing8),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
+                ),
+                child: Icon(Icons.picture_as_pdf, color: AppColors.error),
+              ),
+              title: const Text('Export as PDF'),
+              subtitle: const Text('Detailed report with charts and analysis'),
+              onTap: () {
+                Navigator.pop(context);
+                _exportToPDF();
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(AppTheme.spacing8),
+                decoration: BoxDecoration(
+                  color: AppColors.successGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
+                ),
+                child: Icon(Icons.table_chart, color: AppColors.successGreen),
+              ),
+              title: const Text('Export as Excel'),
+              subtitle: const Text('Spreadsheet with multiple sheets'),
+              onTap: () {
+                Navigator.pop(context);
+                _exportToExcel();
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(AppTheme.spacing8),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
+                ),
+                child: Icon(Icons.text_snippet, color: AppColors.info),
+              ),
+              title: const Text('Export as CSV'),
+              subtitle: const Text('Simple data format for analysis'),
+              onTap: () {
+                Navigator.pop(context);
+                _exportToCSV();
+              },
+            ),
+            const SizedBox(height: AppTheme.spacing8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Export to PDF
+  Future<void> _exportToPDF() async {
+    try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 16),
+                const Text('Generating PDF...'),
+              ],
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+
+      final file = await ExportService.instance.exportBatchesToPDF(
+        _filteredBatches,
+        title: 'Batch History Report',
+        startDate: _dateRange?.start,
+        endDate: _dateRange?.end,
+      );
+
+      await ExportService.instance.shareFile(
+        file,
+        subject: 'Chemical Process Tracker - Batch History Report',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF exported successfully!'),
+            backgroundColor: AppColors.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting PDF: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Export to Excel
+  Future<void> _exportToExcel() async {
+    try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 16),
+                const Text('Generating Excel...'),
+              ],
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+
+      final file = await ExportService.instance.exportBatchesToExcel(
+        _filteredBatches,
+        title: 'Batch History Report',
+        startDate: _dateRange?.start,
+        endDate: _dateRange?.end,
+      );
+
+      await ExportService.instance.shareFile(
+        file,
+        subject: 'Chemical Process Tracker - Batch History Report',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Excel exported successfully!'),
+            backgroundColor: AppColors.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting Excel: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Export to CSV
+  Future<void> _exportToCSV() async {
+    try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 16),
+                const Text('Generating CSV...'),
+              ],
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+
+      final file = await ExportService.instance.exportBatchesToCSV(_filteredBatches);
+
+      await ExportService.instance.shareFile(
+        file,
+        subject: 'Chemical Process Tracker - Batch History Data',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('CSV exported successfully!'),
+            backgroundColor: AppColors.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting CSV: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 }

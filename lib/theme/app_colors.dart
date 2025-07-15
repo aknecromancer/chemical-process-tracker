@@ -230,12 +230,16 @@ class AppColors {
   static const Color textOnPrimary = neutral0;
   static const Color textOnSurface = neutral900;
 
-  /// Background Colors
+  /// Background Colors - Enhanced Contrast
   static const Color backgroundPrimary = neutral0;
   static const Color backgroundSecondary = neutral50;
   static const Color backgroundTertiary = neutral100;
   static const Color backgroundGradientStart = Color(0xFFF8FAFC);
   static const Color backgroundGradientEnd = Color(0xFFF1F5F9);
+  
+  /// Status Bar Compatible Background
+  static const Color statusBarBackground = primaryBlue;
+  static const Color statusBarForeground = neutral0;
 
   /// Additional Semantic Colors
   static const Color successGreen = success;

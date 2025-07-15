@@ -4,12 +4,22 @@ import 'package:flutter/foundation.dart';
 import 'screens/web_home_screen.dart';
 import 'screens/mobile_home_screen.dart';
 import 'theme/app_theme.dart';
+import 'services/platform_storage_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Set system UI overlay style for premium appearance
   SystemChrome.setSystemUIOverlayStyle(AppTheme.lightSystemUiOverlay);
+  
+  // Initialize platform storage service with cloud sync
+  try {
+    await PlatformStorageService.initialize();
+    print('Platform storage service initialized successfully');
+  } catch (e) {
+    print('Platform storage service initialization failed: $e');
+    // Continue with local storage only
+  }
   
   runApp(const ChemicalProcessTrackerApp());
 }
