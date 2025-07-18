@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/production_lot.dart';
 import '../models/material_template.dart';
+import '../models/configurable_defaults.dart';
 import '../services/lot_storage_service.dart';
 import '../services/calculation_engine.dart';
 import '../services/cloud_storage_service.dart';
@@ -44,6 +45,13 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
     _tabController = TabController(length: 3, vsync: this);
     _initializeLot();
     _initializeCalculationEngine();
+    
+    // Add listener to refresh calculations when switching tabs
+    _tabController.addListener(() {
+      if (_tabController.index == 1) { // Materials tab
+        _calculateResults(); // Refresh materials calculations
+      }
+    });
   }
 
   void _initializeLot() {
@@ -65,6 +73,7 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
         pattiQuantity: 0.0,
         pattiRate: 0.0,
         customRates: {},
+        rateSnapshot: {}, // Will be populated when defaults are loaded
         manualEntries: [],
       );
       _lotNumberController.text = 'NEW';
@@ -74,8 +83,75 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
   Future<void> _initializeCalculationEngine() async {
     try {
       final defaults = await MobileStorageService.getDefaults();
+      
       if (defaults != null) {
         _calculationEngine = AdvancedCalculationEngine(defaults);
+        
+        // For new LOTs only, capture rate snapshot from current defaults
+        if (_lot.rateSnapshot.isEmpty && widget.lot == null) {
+          final rateSnapshot = <String, double>{
+            'nitric': defaults.defaultNitricRate,
+            'hcl': defaults.defaultHclRate,
+            'worker': defaults.calculatedWorkerRate,
+            'rent': defaults.calculatedRentRate,
+            'account': defaults.calculatedAccountRate,
+            'cu': defaults.defaultCuRate,
+            'tin': defaults.defaultTinRate,
+            'pd': defaults.defaultPdRate,
+            'other': defaults.defaultOtherRate,
+          };
+          
+          _lot = _lot.copyWith(rateSnapshot: rateSnapshot);
+        }
+        
+        // For existing LOTs without snapshot, they will use current defaults
+        // This is simpler and avoids complex migration
+        
+        // Trigger initial calculation after engine is loaded
+        _calculateResults();
+      } else {
+        // Create default defaults if none exist
+        final defaultDefaults = ConfigurableDefaults(
+          defaultNitricRate: 26.0,
+          defaultHclRate: 1.7,
+          defaultPdRate: 12000.0,
+          defaultCuRate: 600.0,
+          defaultTinRate: 38.0,
+          defaultOtherRate: 4.0,
+          workerFixedAmount: 38000.0,
+          rentFixedAmount: 25000.0,
+          accountFixedAmount: 5000.0,
+          fixedDenominator: 4500.0,
+          cuPercentage: 10.0,
+          tinNumerator: 11.0,
+          tinDenominator: 30.0,
+        );
+        
+        // Save defaults for future use
+        await MobileStorageService.saveDefaults(defaultDefaults);
+        
+        // Initialize with default defaults
+        _calculationEngine = AdvancedCalculationEngine(defaultDefaults);
+        
+        // Create rate snapshot for new LOT
+        if (_lot.rateSnapshot.isEmpty && widget.lot == null) {
+          final rateSnapshot = <String, double>{
+            'nitric': defaultDefaults.defaultNitricRate,
+            'hcl': defaultDefaults.defaultHclRate,
+            'worker': defaultDefaults.calculatedWorkerRate,
+            'rent': defaultDefaults.calculatedRentRate,
+            'account': defaultDefaults.calculatedAccountRate,
+            'cu': defaultDefaults.defaultCuRate,
+            'tin': defaultDefaults.defaultTinRate,
+            'pd': defaultDefaults.defaultPdRate,
+            'other': defaultDefaults.defaultOtherRate,
+          };
+          
+          _lot = _lot.copyWith(rateSnapshot: rateSnapshot);
+        }
+        
+        // Trigger initial calculation
+        _calculateResults();
       }
     } catch (e) {
       print('Error initializing calculation engine: $e');
@@ -84,6 +160,7 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
 
   @override
   void dispose() {
+    _saveLotData(); // Auto-save data before disposing to prevent data loss
     _lotNumberController.dispose();
     _pattiQuantityController.dispose();
     _pattiRateController.dispose();
@@ -91,6 +168,33 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
     _notesController.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  // Auto-save LOT data to prevent data loss on navigation
+  void _saveLotData() {
+    if (_lot.id.isNotEmpty) {
+      final pattiQuantity = double.tryParse(_pattiQuantityController.text) ?? 0.0;
+      final pattiRate = double.tryParse(_pattiRateController.text) ?? 0.0;
+      final pdQuantity = double.tryParse(_pdQuantityController.text);
+      final notes = _notesController.text.trim();
+      
+      final updatedLot = _lot.copyWith(
+        lotNumber: _lotNumberController.text.trim(),
+        pattiQuantity: pattiQuantity,
+        pattiRate: pattiRate,
+        pdQuantity: pdQuantity,
+        manualEntries: _manualEntries,
+        customRates: _customRates,
+        calculationResult: _calculationResult,
+        notes: notes.isEmpty ? null : notes,
+        // Keep existing rateSnapshot - don't overwrite LOT's historical rates
+      );
+      
+      // Save asynchronously but don't wait
+      LotStorageService.saveLot(updatedLot).catchError((e) {
+        print('Error auto-saving LOT: $e');
+      });
+    }
   }
 
   @override
@@ -408,7 +512,7 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
               ),
             ],
             // Add delete button for draft LOTs
-            if (_lot.status == LotStatus.draft && widget.lot != null) ...[
+            if (widget.lot != null) ...[
               const SizedBox(height: AppTheme.spacing16),
               const Divider(),
               const SizedBox(height: AppTheme.spacing12),
@@ -1077,6 +1181,7 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
       final pattiRate = double.tryParse(_pattiRateController.text) ?? 0.0;
       final pdQuantity = double.tryParse(_pdQuantityController.text);
 
+
       if (pattiQuantity > 0 && pattiRate > 0 && _calculationEngine != null) {
         // Calculate manual entries totals
         double manualIncome = 0.0;
@@ -1095,12 +1200,39 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
           }
         }
 
+        // CRITICAL FIX: Use rate snapshot if available, otherwise use current defaults
+        final effectiveRates = <String, double>{};
+
+        // First add current defaults as fallback
+        if (_calculationEngine != null) {
+          final defaults = _calculationEngine!.defaults;
+          effectiveRates.addAll({
+            'nitric': defaults.defaultNitricRate,
+            'hcl': defaults.defaultHclRate,
+            'worker': defaults.calculatedWorkerRate,
+            'rent': defaults.calculatedRentRate,
+            'account': defaults.calculatedAccountRate,
+            'cu': defaults.defaultCuRate,
+            'tin': defaults.defaultTinRate,
+            'pd': defaults.defaultPdRate,
+            'other': defaults.defaultOtherRate,
+          });
+        }
+
+        // Then override with rate snapshot if available (for existing LOTs)
+        if (_lot.rateSnapshot.isNotEmpty) {
+          effectiveRates.addAll(_lot.rateSnapshot);
+        }
+
+        // Finally override with custom rates (LOT-specific changes)
+        effectiveRates.addAll(_customRates);
+        
         // Use AdvancedCalculationEngine for automatic calculation of HCl, nitric, etc.
         final result = _calculationEngine!.calculateProcess(
           pattiQuantity: pattiQuantity,
           pattiRate: pattiRate,
           pdQuantity: pdQuantity,
-          customRates: _customRates,
+          customRates: effectiveRates,
           manualIncome: manualIncome,
           manualExpenses: manualExpenses,
         );
@@ -1144,6 +1276,7 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
         customRates: _customRates,
         calculationResult: _calculationResult,
         notes: notes.isEmpty ? null : notes,
+        // Keep existing rateSnapshot - preserve LOT's historical rates
       );
 
       await LotStorageService.saveLot(updatedLot);
@@ -1153,11 +1286,13 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
         _lot = updatedLot;
       });
 
+      // Always show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('LOT ${_lot.lotNumber} saved successfully!'),
             backgroundColor: AppColors.successGreen,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -1582,7 +1717,7 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
               _buildCostBreakdownRow('CU Income', result.cuIncome, isIncome: true),
               const Divider(height: AppTheme.spacing24),
               _buildCostBreakdownRow('Total Cost', result.totalCost, isTotal: true),
-              _buildCostBreakdownRow('PD Quantity', pdQuantity, unit: 'kg'),
+              _buildCostBreakdownRow('PD Quantity', pdQuantity, unit: 'kg', precision: 3),
               const Divider(height: AppTheme.spacing24),
               _buildCostBreakdownRow('Cost per 1 KG PD', result.costPer1kgPd, isResult: true),
             ],
@@ -1658,7 +1793,7 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
     );
   }
 
-  Widget _buildCostBreakdownRow(String label, double value, {bool isTotal = false, bool isExpense = false, bool isIncome = false, bool isResult = false, String unit = '₹'}) {
+  Widget _buildCostBreakdownRow(String label, double value, {bool isTotal = false, bool isExpense = false, bool isIncome = false, bool isResult = false, String unit = '₹', int precision = 2}) {
     Color textColor = AppColors.textPrimary;
     if (isResult) textColor = AppColors.primaryBlue;
     if (isIncome) textColor = AppColors.successGreen;
@@ -1677,7 +1812,7 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
             ),
           ),
           Text(
-            unit == '₹' ? '₹${value.toStringAsFixed(2)}' : '${value.toStringAsFixed(2)} $unit',
+            unit == '₹' ? '₹${value.toStringAsFixed(precision)}' : '${value.toStringAsFixed(precision)} $unit',
             style: AppTheme.bodyMedium.copyWith(
               color: textColor,
               fontWeight: isTotal || isResult ? FontWeight.w600 : FontWeight.normal,
@@ -1754,11 +1889,33 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
   }
 
   Future<void> _deleteLot() async {
+    // Different confirmation messages based on LOT status
+    String title;
+    String content;
+    
+    switch (_lot.status) {
+      case LotStatus.draft:
+        title = 'Delete Draft LOT';
+        content = 'Are you sure you want to delete LOT ${_lot.lotNumber}? This action cannot be undone.';
+        break;
+      case LotStatus.inProgress:
+        title = 'Delete In-Progress LOT';
+        content = 'WARNING: LOT ${_lot.lotNumber} is currently in progress. Deleting it will permanently remove all production data. Are you sure you want to continue?';
+        break;
+      case LotStatus.completed:
+        title = 'Delete Completed LOT';
+        content = 'CAUTION: LOT ${_lot.lotNumber} is completed with financial data. Deleting it will permanently remove all production and financial records. Are you sure you want to continue?';
+        break;
+      default:
+        title = 'Delete LOT';
+        content = 'Are you sure you want to delete LOT ${_lot.lotNumber}? This action cannot be undone.';
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete LOT'),
-        content: Text('Are you sure you want to delete LOT ${_lot.lotNumber}? This action cannot be undone.'),
+        title: Text(title),
+        content: Text(content),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

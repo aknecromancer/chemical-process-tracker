@@ -211,8 +211,20 @@ class AdvancedCalculationEngine {
     Map<String, double>? customRates,
   }) {
     final quantities = calculateDerivedQuantities(pattiQuantity);
-    final defaultRates = calculateMaterialRates();
-    final effectiveRates = {...defaultRates, ...?customRates};
+    
+    // Use provided customRates (which includes rate snapshot) instead of defaults
+    final effectiveRates = Map<String, double>.from(customRates ?? {});
+    
+    // CRITICAL: Only fall back to defaults if rate is not provided in customRates
+    // This should rarely happen since rate snapshot should be populated
+    if (!effectiveRates.containsKey('nitric')) effectiveRates['nitric'] = defaults.defaultNitricRate;
+    if (!effectiveRates.containsKey('hcl')) effectiveRates['hcl'] = defaults.defaultHclRate;
+    if (!effectiveRates.containsKey('worker')) effectiveRates['worker'] = defaults.calculatedWorkerRate;
+    if (!effectiveRates.containsKey('rent')) effectiveRates['rent'] = defaults.calculatedRentRate;
+    if (!effectiveRates.containsKey('account')) effectiveRates['account'] = defaults.calculatedAccountRate;
+    if (!effectiveRates.containsKey('cu')) effectiveRates['cu'] = defaults.defaultCuRate;
+    if (!effectiveRates.containsKey('tin')) effectiveRates['tin'] = defaults.defaultTinRate;
+    if (!effectiveRates.containsKey('pd')) effectiveRates['pd'] = defaults.defaultPdRate;
 
     final materials = <MaterialInput>[
       // Phase 1: Raw and Processing Materials
@@ -351,7 +363,8 @@ class AdvancedCalculationEngine {
     final phase1TotalCost = phase1Materials.fold(0.0, (sum, m) => sum + m.amount);
     
     // Calculate Phase 1 with Other Amount for P&L calculation (E25)
-    final phase1WithOther = phase1TotalCost + (pattiQuantity * defaults.defaultOtherRate);
+    final otherRate = customRates?['other'] ?? defaults.defaultOtherRate;
+    final phase1WithOther = phase1TotalCost + (pattiQuantity * otherRate);
 
     // Calculate Phase 2: Product Income
     final pdIncome = products.fold(0.0, (sum, m) => sum + m.amount);

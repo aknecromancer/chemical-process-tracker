@@ -52,35 +52,76 @@ class AnalyticsDashboard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppTheme.spacing20),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppTheme.spacing16,
-                vertical: AppTheme.spacing8,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.info.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-                border: Border.all(
-                  color: AppColors.info.withOpacity(0.3),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spacing16,
+                  vertical: AppTheme.spacing12,
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.lightbulb_outline,
-                    size: 16,
-                    color: AppColors.info,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.info.withOpacity(0.1),
+                      AppColors.info.withOpacity(0.05),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const SizedBox(width: AppTheme.spacing8),
-                  Text(
-                    'Pro Tip: Analytics appear after your first batch',
-                    style: AppTheme.bodySmall.copyWith(
-                      color: AppColors.info,
-                      fontWeight: FontWeight.w500,
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadius12),
+                  border: Border.all(
+                    color: AppColors.info.withOpacity(0.2),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.info.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppTheme.spacing6),
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
+                      ),
+                      child: Icon(
+                        Icons.lightbulb_outline,
+                        size: 18,
+                        color: AppColors.info,
+                      ),
+                    ),
+                    const SizedBox(width: AppTheme.spacing12),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pro Tip',
+                            style: AppTheme.bodySmall.copyWith(
+                              color: AppColors.info,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: AppTheme.spacing2),
+                          Text(
+                            'Analytics appear after your first batch',
+                            style: AppTheme.bodySmall.copyWith(
+                              color: AppColors.info.withOpacity(0.8),
+                              fontWeight: FontWeight.w500,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

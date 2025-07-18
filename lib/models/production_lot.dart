@@ -12,6 +12,7 @@ class ProductionLot {
   final double pattiRate;
   final double? pdQuantity;
   final Map<String, double> customRates;
+  final Map<String, double> rateSnapshot; // Store rates at time of LOT creation
   final List<Map<String, dynamic>> manualEntries;
   final CalculationResult? calculationResult;
   final DateTime createdAt;
@@ -28,12 +29,14 @@ class ProductionLot {
     required this.pattiRate,
     this.pdQuantity,
     required this.customRates,
+    Map<String, double>? rateSnapshot,
     required this.manualEntries,
     this.calculationResult,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.notes,
   }) : id = id ?? const Uuid().v4(),
+       rateSnapshot = rateSnapshot ?? {},
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 
@@ -49,6 +52,7 @@ class ProductionLot {
       'pattiRate': pattiRate,
       'pdQuantity': pdQuantity,
       'customRates': customRates,
+      'rateSnapshot': rateSnapshot,
       'manualEntries': manualEntries,
       'calculationResult': calculationResult?.toJson(),
       'createdAt': createdAt.millisecondsSinceEpoch,
@@ -74,6 +78,7 @@ class ProductionLot {
       pattiRate: (json['pattiRate'] ?? 0).toDouble(),
       pdQuantity: json['pdQuantity']?.toDouble(),
       customRates: Map<String, double>.from(json['customRates'] ?? {}),
+      rateSnapshot: Map<String, double>.from(json['rateSnapshot'] ?? {}),
       manualEntries: List<Map<String, dynamic>>.from(json['manualEntries'] ?? []),
       calculationResult: json['calculationResult'] != null 
           ? CalculationResult.fromJson(json['calculationResult'])
@@ -95,6 +100,7 @@ class ProductionLot {
     double? pattiRate,
     double? pdQuantity,
     Map<String, double>? customRates,
+    Map<String, double>? rateSnapshot,
     List<Map<String, dynamic>>? manualEntries,
     CalculationResult? calculationResult,
     DateTime? createdAt,
@@ -111,6 +117,7 @@ class ProductionLot {
       pattiRate: pattiRate ?? this.pattiRate,
       pdQuantity: pdQuantity ?? this.pdQuantity,
       customRates: customRates ?? this.customRates,
+      rateSnapshot: rateSnapshot ?? this.rateSnapshot,
       manualEntries: manualEntries ?? this.manualEntries,
       calculationResult: calculationResult ?? this.calculationResult,
       createdAt: createdAt ?? this.createdAt,
