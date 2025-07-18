@@ -3,8 +3,10 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/configurable_defaults.dart';
 import '../models/production_batch.dart';
+import '../models/production_lot.dart';
 import 'supabase_service.dart';
 import 'mobile_storage_service.dart';
+import 'lot_storage_service.dart';
 
 /// Cloud storage service with offline-first approach
 /// This service handles synchronization between local storage and cloud (Supabase)
@@ -241,6 +243,32 @@ class CloudStorageService {
     await saveBatch(batch); // Same operation for our implementation
   }
   
+  /// Save LOT with offline-first approach
+  static Future<void> saveLot(ProductionLot lot) async {
+    try {
+      // Always save to local first
+      await LotStorageService.saveLot(lot);
+      
+      // If online, try to sync with cloud
+      if (await instance.isCloudAvailable()) {
+        try {
+          // TODO: Implement Supabase LOT saving when needed
+          print('LOT saved locally: ${lot.lotNumber}');
+        } catch (e) {
+          print('Error saving LOT to cloud: $e');
+          // Add to pending sync operations
+          await instance._addPendingSyncOperation('saveLot', lot.toJson());
+        }
+      } else {
+        // Add to pending sync operations
+        await instance._addPendingSyncOperation('saveLot', lot.toJson());
+      }
+    } catch (e) {
+      print('Error saving LOT: $e');
+      rethrow;
+    }
+  }
+  
   /// Delete batch with offline-first approach
   Future<void> deleteBatch(DateTime date) async {
     try {
@@ -344,6 +372,10 @@ class CloudStorageService {
       case 'saveBatch':
         final batch = ProductionBatch.fromJson(data);
         await SupabaseService.instance.saveBatch(batch);
+        break;
+      case 'saveLot':
+        final lot = ProductionLot.fromJson(data);
+        await LotStorageService.saveLot(lot);
         break;
       case 'deleteBatch':
         final date = DateTime.parse(data['date']);

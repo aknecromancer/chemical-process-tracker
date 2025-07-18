@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../services/platform_storage_service.dart';
-import '../models/production_batch.dart';
+import '../services/lot_storage_service.dart';
+import '../models/production_lot.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_card.dart';
-import '../utils/status_bar_utils.dart';
-import 'mobile_batch_entry_screen.dart';
-import 'mobile_batch_history_screen.dart';
-import 'mobile_analytics_screen.dart';
+import 'mobile_lot_management_screen.dart';
+import 'mobile_lot_entry_screen.dart';
+import 'analytics_screen.dart';
 import 'settings_screen.dart';
 
 class MobileHomeScreen extends StatefulWidget {
@@ -22,6 +22,13 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
 
+  final List<Widget> _screens = [
+    const LotDashboardTab(),
+    const MobileLotManagementScreen(),
+    const AnalyticsScreen(),
+    const SettingsScreen(),
+  ];
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -34,21 +41,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final List<Widget> screens = [
-      const MobileDashboardTab(),
-      const MobileBatchHistoryScreen(),
-      const SettingsScreen(),
-    ];
-
-    // Ensure consistent status bar appearance
-    StatusBarUtils.applyPrimaryStyle();
-
     return Scaffold(
       body: PageView(
         controller: _pageController,
@@ -57,75 +50,125 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
             _selectedIndex = index;
           });
         },
-        children: screens,
+        children: _screens,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: AppColors.primaryBlue,
+          unselectedItemColor: AppColors.textSecondary,
+          selectedLabelStyle: AppTheme.bodySmall.copyWith(
+            fontWeight: FontWeight.w600,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'Batches',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
+          unselectedLabelStyle: AppTheme.bodySmall,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.inventory_2_outlined),
+              activeIcon: Icon(Icons.inventory_2),
+              label: 'LOTs',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.analytics_outlined),
+              activeIcon: Icon(Icons.analytics),
+              label: 'Analytics',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings_outlined),
+              activeIcon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class MobileDashboardTab extends StatefulWidget {
-  const MobileDashboardTab({super.key});
+class LotDashboardTab extends StatefulWidget {
+  const LotDashboardTab({super.key});
 
   @override
-  State<MobileDashboardTab> createState() => _MobileDashboardTabState();
+  State<LotDashboardTab> createState() => _LotDashboardTabState();
 }
 
-class _MobileDashboardTabState extends State<MobileDashboardTab> {
-  List<ProductionBatch> _recentBatches = [];
-  ProductionBatch? _todaysBatch;
+class _LotDashboardTabState extends State<LotDashboardTab> {
+  List<ProductionLot> _lots = [];
+  List<ProductionLot> _activeLots = [];
+  List<ProductionLot> _recentCompletedLots = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadDashboardData();
+    _loadData();
   }
 
-  Future<void> _loadDashboardData() async {
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    
     try {
-      final batches = await PlatformStorageService.getAllBatches();
-      final today = DateTime.now();
-      
-      // Check for today's batch
-      final todaysBatch = batches.where((batch) {
-        return batch.date.year == today.year &&
-               batch.date.month == today.month &&
-               batch.date.day == today.day;
-      }).firstOrNull;
+      final allLots = await LotStorageService.getAllLots();
+      final activeLots = await LotStorageService.getActiveLots();
+      final recentCompleted = await LotStorageService.getRecentCompletedLots(7);
       
       setState(() {
-        _recentBatches = batches.take(5).toList();
-        _todaysBatch = todaysBatch;
-        _isLoading = false;
+        _lots = allLots;
+        _activeLots = activeLots;
+        _recentCompletedLots = recentCompleted.take(5).toList();
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading batches: $e')),
+          SnackBar(
+            content: Text('Error loading data: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _createNewLot() async {
+    try {
+      final newLot = await LotStorageService.createNewLot();
+      await _loadData();
+      
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MobileLotEntryScreen(lot: newLot),
+          ),
+        ).then((_) => _loadData());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating LOT: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -133,232 +176,268 @@ class _MobileDashboardTabState extends State<MobileDashboardTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.backgroundGradientStart,
-            AppColors.backgroundGradientEnd,
-          ],
+    final today = DateTime.now();
+    final dateFormat = DateFormat('EEEE, MMMM d, y');
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Chemical Process Tracker',
+          style: AppTheme.titleLarge.copyWith(
+            color: AppColors.textPrimary,
+          ),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        systemOverlayStyle: AppTheme.lightSystemUiOverlay,
+        actions: [
+          IconButton(
+            onPressed: _createNewLot,
+            icon: Icon(
+              Icons.add,
+              color: AppColors.primaryBlue,
+            ),
+          ),
+        ],
       ),
-      child: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            _buildAppBar(),
-            _buildTodaysStatus(),
-            _buildQuickActions(),
-            _buildBusinessAnalytics(),
-            _buildRecentBatches(),
-          ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.backgroundGradientStart,
+              AppColors.backgroundGradientEnd,
+            ],
+          ),
+        ),
+        child: RefreshIndicator(
+          onRefresh: _loadData,
+          color: AppColors.primaryBlue,
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(AppTheme.spacing16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Date Header
+                      Text(
+                        dateFormat.format(today),
+                        style: AppTheme.headlineSmall.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: AppTheme.spacing24),
+
+                      // Active LOTs Section
+                      _buildActiveLotSection(),
+                      const SizedBox(height: AppTheme.spacing24),
+
+                      // Quick Stats
+                      _buildQuickStats(),
+                      const SizedBox(height: AppTheme.spacing24),
+
+                      // Recent Completed LOTs
+                      _buildRecentCompletedLots(),
+                    ],
+                  ),
+                ),
         ),
       ),
     );
   }
 
-  Widget _buildAppBar() {
-    return SliverAppBar(
-      expandedHeight: 120,
-      floating: false,
-      pinned: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.primaryBlue.withValues(alpha: 0.1),
-                AppColors.primaryBlue.withValues(alpha: 0.05),
-              ],
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppTheme.spacing16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  'Chemical Process Tracker',
-                  style: AppTheme.headlineMedium.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
+  Widget _buildActiveLotSection() {
+    if (_activeLots.isEmpty) {
+      return PremiumCard(
+        child: Padding(
+          padding: const EdgeInsets.all(AppTheme.spacing20),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppTheme.spacing16),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.add_circle_outline,
+                  size: 48,
+                  color: AppColors.primaryBlue,
+                ),
+              ),
+              const SizedBox(height: AppTheme.spacing16),
+              Text(
+                'No Active LOTs',
+                style: AppTheme.titleMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppTheme.spacing8),
+              Text(
+                'Create a new production LOT to start tracking materials, costs, and production efficiency.',
+                textAlign: TextAlign.center,
+                style: AppTheme.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppTheme.spacing20),
+              ElevatedButton.icon(
+                onPressed: _createNewLot,
+                icon: const Icon(Icons.add),
+                label: const Text('Create New LOT'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacing20,
+                    vertical: AppTheme.spacing12,
                   ),
                 ),
-                const SizedBox(height: AppTheme.spacing4),
-                Text(
-                  'Enterprise Edition',
-                  style: AppTheme.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-      ),
-      actions: [
-        if (_todaysBatch != null && _isDraftBatch(_todaysBatch!))
-          Container(
-            margin: const EdgeInsets.only(right: AppTheme.spacing8),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spacing8,
-              vertical: AppTheme.spacing4,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Active LOTs',
+              style: AppTheme.titleMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            decoration: BoxDecoration(
-              color: AppColors.warning.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppTheme.borderRadius12),
-              border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.edit_outlined,
-                  color: AppColors.warning,
-                  size: 16,
-                ),
-                const SizedBox(width: AppTheme.spacing4),
-                Text(
-                  'Draft',
-                  style: AppTheme.bodySmall.copyWith(
-                    color: AppColors.warning,
-                    fontWeight: FontWeight.w500,
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MobileLotManagementScreen(),
                   ),
+                ).then((_) => _loadData());
+              },
+              child: Text(
+                'View All',
+                style: AppTheme.bodyMedium.copyWith(
+                  color: AppColors.primaryBlue,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+              ),
             ),
-          ),
-        IconButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SettingsScreen()),
-            );
-          },
-          icon: Icon(
-            Icons.settings,
-            color: AppColors.textSecondary,
-          ),
+          ],
         ),
+        const SizedBox(height: AppTheme.spacing12),
+        ..._activeLots.take(3).map((lot) => Padding(
+          padding: const EdgeInsets.only(bottom: AppTheme.spacing12),
+          child: _buildActiveLotCard(lot),
+        )),
       ],
     );
   }
 
-  Widget _buildTodaysStatus() {
-    if (_todaysBatch == null) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
+  Widget _buildActiveLotCard(ProductionLot lot) {
+    final dateFormat = DateFormat('MMM d');
     
-    final isDraft = _isDraftBatch(_todaysBatch!);
-    
-    return SliverToBoxAdapter(
+    return PremiumCard(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MobileLotEntryScreen(lot: lot),
+          ),
+        ).then((_) => _loadData());
+      },
       child: Padding(
         padding: const EdgeInsets.all(AppTheme.spacing16),
-        child: PremiumCard(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: isDraft 
-                    ? [AppColors.warning.withValues(alpha: 0.1), AppColors.warning.withValues(alpha: 0.05)]
-                    : [AppColors.successGreen.withValues(alpha: 0.1), AppColors.successGreen.withValues(alpha: 0.05)],
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppTheme.spacing12),
+              decoration: BoxDecoration(
+                color: lot.status == LotStatus.inProgress 
+                    ? AppColors.primaryBlue.withValues(alpha: 0.1)
+                    : AppColors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
               ),
-              borderRadius: BorderRadius.circular(AppTheme.borderRadius12),
+              child: Icon(
+                lot.status == LotStatus.inProgress 
+                    ? Icons.play_arrow 
+                    : Icons.edit_outlined,
+                color: lot.status == LotStatus.inProgress 
+                    ? AppColors.primaryBlue 
+                    : AppColors.warning,
+                size: 24,
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(AppTheme.spacing16),
+            const SizedBox(width: AppTheme.spacing12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        isDraft ? Icons.edit_outlined : Icons.check_circle_outline,
-                        color: isDraft ? AppColors.warning : AppColors.successGreen,
-                        size: 24,
+                      Text(
+                        lot.lotNumber,
+                        style: AppTheme.titleMedium.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(width: AppTheme.spacing8),
-                      Text(
-                        isDraft ? 'Today\'s Batch - Draft' : 'Today\'s Batch - Completed',
-                        style: AppTheme.titleMedium.copyWith(
-                          color: isDraft ? AppColors.warning : AppColors.successGreen,
-                          fontWeight: FontWeight.w600,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacing6,
+                          vertical: AppTheme.spacing2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: lot.status == LotStatus.inProgress 
+                              ? AppColors.primaryBlue 
+                              : AppColors.warning,
+                          borderRadius: BorderRadius.circular(AppTheme.borderRadius4),
+                        ),
+                        child: Text(
+                          lot.statusDisplayName,
+                          style: AppTheme.bodySmall.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 10,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppTheme.spacing8),
+                  const SizedBox(height: AppTheme.spacing4),
                   Text(
-                    isDraft 
-                        ? 'Continue working on today\'s batch entry'
-                        : 'Today\'s batch has been completed',
-                    style: AppTheme.bodyMedium.copyWith(
+                    'Started: ${dateFormat.format(lot.startDate)}',
+                    style: AppTheme.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  if (isDraft) ...[
-                    const SizedBox(height: AppTheme.spacing12),
-                    ElevatedButton.icon(
-                      onPressed: () => _navigateToBatch(_todaysBatch!.date),
-                      icon: const Icon(Icons.play_arrow, size: 20),
-                      label: const Text('Continue Batch'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.warning,
-                        foregroundColor: Colors.white,
+                  if (lot.status == LotStatus.inProgress)
+                    Text(
+                      'Duration: ${lot.durationInDays} days',
+                      style: AppTheme.bodySmall.copyWith(
+                        color: AppColors.primaryBlue,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ],
                 ],
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Quick Actions',
-              style: AppTheme.titleLarge.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppTheme.spacing16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildActionCard(
-                    title: 'Today\'s Entry',
-                    subtitle: 'Start today\'s batch',
-                    icon: Icons.today_outlined,
-                    color: AppColors.primaryBlue,
-                    onTap: () => _navigateToNewBatch(),
-                  ),
-                ),
-                const SizedBox(width: AppTheme.spacing12),
-                Expanded(
-                  child: _buildActionCard(
-                    title: 'Select Date',
-                    subtitle: 'Custom date entry',
-                    icon: Icons.calendar_today_outlined,
-                    color: AppColors.info,
-                    onTap: () => _navigateToCustomDateBatch(),
-                  ),
-                ),
-              ],
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: AppColors.textSecondary,
             ),
           ],
         ),
@@ -366,300 +445,229 @@ class _MobileDashboardTabState extends State<MobileDashboardTab> {
     );
   }
 
-  Widget _buildBusinessAnalytics() {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        child: PremiumCard(
-          onTap: () => _navigateToAnalytics(),
-          child: Padding(
-            padding: const EdgeInsets.all(AppTheme.spacing16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(AppTheme.spacing8),
-                      decoration: BoxDecoration(
-                        color: AppColors.info.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                      ),
-                      child: Icon(
-                        Icons.analytics_outlined,
-                        color: AppColors.info,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: AppTheme.spacing12),
-                    Text(
-                      'Business Analytics',
-                      style: AppTheme.titleMedium.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      Icons.chevron_right,
-                      color: AppColors.textTertiary,
-                    ),
-                  ],
+  Widget _buildQuickStats() {
+    final completedLots = _lots.where((lot) => lot.isCompleted).toList();
+    final profitableLots = completedLots.where((lot) => lot.isProfitable).length;
+    final avgEfficiency = completedLots.isEmpty 
+        ? 0.0 
+        : completedLots.map((lot) => lot.pdEfficiency).reduce((a, b) => a + b) / completedLots.length;
+    final avgPnL = completedLots.isEmpty 
+        ? 0.0 
+        : completedLots.map((lot) => lot.netPnL).reduce((a, b) => a + b) / completedLots.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Stats',
+          style: AppTheme.titleMedium.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spacing12),
+        Row(
+          children: [
+            Expanded(
+              child: PremiumCard.kpi(
+                title: 'Total LOTs',
+                value: _lots.length.toString(),
+                icon: Icons.inventory_2_outlined,
+                iconColor: AppColors.primaryBlue,
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacing12),
+            Expanded(
+              child: PremiumCard.kpi(
+                title: 'Active',
+                value: _activeLots.length.toString(),
+                icon: Icons.play_arrow,
+                iconColor: AppColors.primaryBlue,
+                valueColor: AppColors.primaryBlue,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppTheme.spacing12),
+        Row(
+          children: [
+            Expanded(
+              child: PremiumCard.kpi(
+                title: 'Profitable',
+                value: profitableLots.toString(),
+                icon: Icons.trending_up,
+                iconColor: AppColors.successGreen,
+                valueColor: AppColors.successGreen,
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacing12),
+            Expanded(
+              child: PremiumCard.kpi(
+                title: 'Avg P&L',
+                value: '₹${avgPnL.toStringAsFixed(0)}',
+                icon: Icons.account_balance_wallet_outlined,
+                iconColor: AppColors.getPnLColor(avgPnL),
+                valueColor: AppColors.getPnLColor(avgPnL),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentCompletedLots() {
+    if (_recentCompletedLots.isEmpty) {
+      return PremiumCard(
+        child: Padding(
+          padding: const EdgeInsets.all(AppTheme.spacing20),
+          child: Column(
+            children: [
+              Icon(
+                Icons.history,
+                size: 48,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(height: AppTheme.spacing16),
+              Text(
+                'No Completed LOTs',
+                style: AppTheme.titleMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(height: AppTheme.spacing12),
+              ),
+              const SizedBox(height: AppTheme.spacing8),
+              Text(
+                'Complete your first LOT to see recent completion history.',
+                textAlign: TextAlign.center,
+                style: AppTheme.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recently Completed',
+              style: AppTheme.titleMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AnalyticsScreen(),
+                  ),
+                );
+              },
+              child: Text(
+                'View Analytics',
+                style: AppTheme.bodyMedium.copyWith(
+                  color: AppColors.primaryBlue,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppTheme.spacing12),
+        ..._recentCompletedLots.map((lot) => Padding(
+          padding: const EdgeInsets.only(bottom: AppTheme.spacing8),
+          child: _buildCompletedLotCard(lot),
+        )),
+      ],
+    );
+  }
+
+  Widget _buildCompletedLotCard(ProductionLot lot) {
+    final dateFormat = DateFormat('MMM d');
+    
+    return PremiumCard(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MobileLotEntryScreen(lot: lot),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacing12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.successGreen.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_circle,
+                color: AppColors.successGreen,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacing12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    lot.lotNumber,
+                    style: AppTheme.bodyMedium.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    'Completed: ${dateFormat.format(lot.completedDate!)}',
+                    style: AppTheme.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
                 Text(
-                  'View detailed performance metrics, cost analysis, and efficiency trends',
+                  '₹${lot.netPnL.toStringAsFixed(0)}',
                   style: AppTheme.bodyMedium.copyWith(
+                    color: lot.isProfitable ? AppColors.successGreen : AppColors.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '${lot.pdEfficiency.toStringAsFixed(1)}%',
+                  style: AppTheme.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return PremiumCard(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppTheme.spacing12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppTheme.borderRadius12),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: AppTheme.spacing12),
-            Text(
-              title,
-              style: AppTheme.titleMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppTheme.spacing4),
-            Text(
-              subtitle,
-              style: AppTheme.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentBatches() {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Recent Batches',
-              style: AppTheme.titleLarge.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppTheme.spacing16),
-            if (_isLoading)
-              const Center(
-                child: CircularProgressIndicator(),
-              )
-            else if (_recentBatches.isEmpty)
-              _buildEmptyState()
-            else
-              ..._recentBatches.map((batch) => _buildBatchCard(batch)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return PremiumCard(
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing24),
-        child: Column(
-          children: [
+            const SizedBox(width: AppTheme.spacing8),
             Icon(
-              Icons.inventory_2_outlined,
-              size: 64,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(height: AppTheme.spacing16),
-            Text(
-              'No batches yet',
-              style: AppTheme.titleMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppTheme.spacing8),
-            Text(
-              'Create your first batch to get started',
-              style: AppTheme.bodyMedium.copyWith(
-                color: AppColors.textTertiary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppTheme.spacing16),
-            ElevatedButton.icon(
-              onPressed: () => _navigateToNewBatch(),
-              icon: const Icon(Icons.add),
-              label: const Text('Create Batch'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
-                foregroundColor: Colors.white,
-              ),
+              lot.isProfitable ? Icons.trending_up : Icons.trending_down,
+              color: lot.isProfitable ? AppColors.successGreen : AppColors.error,
+              size: 16,
             ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildBatchCard(ProductionBatch batch) {
-    final dateFormat = DateFormat('MMM d, y');
-    
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppTheme.spacing12),
-      child: PremiumCard(
-        onTap: () => _navigateToBatch(batch.date),
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.spacing16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppTheme.spacing8),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadius8),
-                ),
-                child: Icon(
-                  Icons.inventory_2_outlined,
-                  color: AppColors.primaryBlue,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: AppTheme.spacing12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      dateFormat.format(batch.date),
-                      style: AppTheme.titleMedium.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: AppTheme.spacing4),
-                    if (batch.calculationResult != null)
-                      Text(
-                        'P&L: ₹${batch.calculationResult!.finalProfitLoss.toStringAsFixed(2)}',
-                        style: AppTheme.bodyMedium.copyWith(
-                          color: batch.calculationResult!.finalProfitLoss >= 0
-                              ? AppColors.successGreen
-                              : AppColors.error,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: AppColors.textTertiary,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _navigateToNewBatch() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MobileBatchEntryScreen(date: DateTime.now()),
-      ),
-    );
-  }
-
-  void _navigateToCustomDateBatch() async {
-    final selectedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      helpText: 'Select batch date',
-      cancelText: 'Cancel',
-      confirmText: 'Create Batch',
-    );
-    
-    if (selectedDate != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MobileBatchEntryScreen(date: selectedDate),
-        ),
-      );
-    }
-  }
-
-  void _navigateToHistory() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const MobileBatchHistoryScreen(),
-      ),
-    );
-  }
-
-  void _navigateToBatch(DateTime date) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MobileBatchEntryScreen(date: date),
-      ),
-    );
-  }
-
-  void _navigateToAnalytics() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const MobileAnalyticsScreen(),
-      ),
-    );
-  }
-
-  bool _isDraftBatch(ProductionBatch batch) {
-    // A batch is considered draft if it has minimal data or incomplete calculations
-    return batch.calculationResult == null || 
-           batch.pattiQuantity == 0 || 
-           batch.pattiRate == 0;
   }
 }

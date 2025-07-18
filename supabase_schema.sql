@@ -37,13 +37,45 @@ CREATE TABLE IF NOT EXISTS configurable_defaults (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create production_batches table
+-- Create production_lots table (NEW: LOT-based tracking)
+CREATE TABLE IF NOT EXISTS production_lots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- LOT identification
+    lot_number TEXT NOT NULL UNIQUE,
+    start_date DATE NOT NULL,
+    completed_date DATE,
+    status TEXT NOT NULL DEFAULT 'draft', -- 'draft', 'inProgress', 'completed', 'archived'
+    
+    -- Primary product data
+    patti_quantity DECIMAL(10,2) DEFAULT 0.00,
+    patti_rate DECIMAL(10,2) DEFAULT 0.00,
+    pd_quantity DECIMAL(10,2),
+    
+    -- Custom rates and material data (stored as JSONB for flexibility)
+    custom_rates JSONB DEFAULT '{}'::jsonb,
+    manual_entries JSONB DEFAULT '[]'::jsonb,
+    
+    -- Calculation results (stored as JSONB)
+    calculation_result JSONB DEFAULT '{}'::jsonb,
+    
+    -- Metadata
+    notes TEXT DEFAULT '',
+    
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create production_batches table (LEGACY: for backward compatibility)
 CREATE TABLE IF NOT EXISTS production_batches (
     id TEXT PRIMARY KEY, -- Format: batch_YYYY-MM-DD
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     
-    -- Batch identification
+    -- Batch identification (legacy support)
     batch_date DATE NOT NULL,
+    lot_id UUID REFERENCES production_lots(id) ON DELETE CASCADE,
     
     -- Primary product data
     patti_quantity DECIMAL(10,2) DEFAULT 0.00,
@@ -67,9 +99,18 @@ CREATE TABLE IF NOT EXISTS production_batches (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create indexes for better performance
+-- Create indexes for better performance on production_lots
+CREATE INDEX IF NOT EXISTS idx_production_lots_lot_number ON production_lots(lot_number);
+CREATE INDEX IF NOT EXISTS idx_production_lots_user_id ON production_lots(user_id);
+CREATE INDEX IF NOT EXISTS idx_production_lots_start_date ON production_lots(start_date);
+CREATE INDEX IF NOT EXISTS idx_production_lots_completed_date ON production_lots(completed_date);
+CREATE INDEX IF NOT EXISTS idx_production_lots_status ON production_lots(status);
+CREATE INDEX IF NOT EXISTS idx_production_lots_created_at ON production_lots(created_at);
+
+-- Create indexes for better performance on production_batches (legacy)
 CREATE INDEX IF NOT EXISTS idx_production_batches_batch_date ON production_batches(batch_date);
 CREATE INDEX IF NOT EXISTS idx_production_batches_user_id ON production_batches(user_id);
+CREATE INDEX IF NOT EXISTS idx_production_batches_lot_id ON production_batches(lot_id);
 CREATE INDEX IF NOT EXISTS idx_production_batches_created_at ON production_batches(created_at);
 CREATE INDEX IF NOT EXISTS idx_production_batches_is_completed ON production_batches(is_completed);
 
