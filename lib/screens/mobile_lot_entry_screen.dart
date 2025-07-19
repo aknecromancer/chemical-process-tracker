@@ -104,8 +104,9 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
           _lot = _lot.copyWith(rateSnapshot: rateSnapshot);
         }
         
-        // For existing LOTs without snapshot, they will use current defaults
-        // This is simpler and avoids complex migration
+        // For existing LOTs without snapshot, they should NOT get current defaults
+        // They should continue using current defaults dynamically (legacy behavior)
+        // Only new LOTs get rate snapshots to preserve their creation-time rates
         
         // Trigger initial calculation after engine is loaded
         _calculateResults();
@@ -149,6 +150,10 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
           
           _lot = _lot.copyWith(rateSnapshot: rateSnapshot);
         }
+        
+        // For existing LOTs without snapshot, they should NOT get current defaults
+        // They should continue using current defaults dynamically (legacy behavior)
+        // Only new LOTs get rate snapshots to preserve their creation-time rates
         
         // Trigger initial calculation
         _calculateResults();
@@ -777,7 +782,7 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
                       ),
                     ),
                     Text(
-                      '${pdEfficiency.toStringAsFixed(2)}%',
+                      '${pdEfficiency.toStringAsFixed(4)}%',
                       style: AppTheme.bodyMedium.copyWith(
                         color: efficiencyColor,
                         fontWeight: FontWeight.w600,
@@ -1143,11 +1148,14 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
     showDialog(
       context: context,
       builder: (context) => _ManualEntryDialog(
-        onSave: (entry) {
+        onSave: (entry) async {
           setState(() {
             _manualEntries.add(entry);
             _calculateResults();
           });
+          
+          // Auto-save the LOT with updated manual entries
+          await _saveManualEntries();
         },
       ),
     );
@@ -1158,21 +1166,136 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
       context: context,
       builder: (context) => _ManualEntryDialog(
         entry: _manualEntries[index],
-        onSave: (entry) {
+        onSave: (entry) async {
           setState(() {
             _manualEntries[index] = entry;
             _calculateResults();
           });
+          
+          // Auto-save the LOT with updated manual entries
+          await _saveManualEntries();
         },
       ),
     );
   }
 
-  void _deleteManualEntry(int index) {
+  void _deleteManualEntry(int index) async {
     setState(() {
       _manualEntries.removeAt(index);
       _calculateResults();
     });
+    
+    // Auto-save the LOT with updated manual entries
+    await _saveManualEntries();
+  }
+
+  Map<String, double> _getEffectiveRates() {
+    final effectiveRates = <String, double>{};
+
+    // Different behavior for new LOTs vs existing LOTs
+    if (_lot.rateSnapshot.isNotEmpty) {
+      // LOT has rate snapshot (new LOT created after rate snapshot feature)
+      // Use snapshot rates (preserves creation-time rates)
+      effectiveRates.addAll(_lot.rateSnapshot);
+    } else if (widget.lot != null) {
+      // Existing LOT without snapshot (legacy LOT)
+      // IMPORTANT: For true rate independence, these LOTs should freeze their rates
+      // at the time they were last calculated. Since we don't have that data,
+      // we need to create a snapshot from CURRENT defaults and save it.
+      if (_calculationEngine != null) {
+        final defaults = _calculationEngine!.defaults;
+        final frozenRates = <String, double>{
+          'nitric': defaults.defaultNitricRate,
+          'hcl': defaults.defaultHclRate,
+          'worker': defaults.calculatedWorkerRate,
+          'rent': defaults.calculatedRentRate,
+          'account': defaults.calculatedAccountRate,
+          'cu': defaults.defaultCuRate,
+          'tin': defaults.defaultTinRate,
+          'pd': defaults.defaultPdRate,
+          'other': defaults.defaultOtherRate,
+        };
+        effectiveRates.addAll(frozenRates);
+        
+        // Save this as the LOT's permanent rate snapshot
+        _lot = _lot.copyWith(rateSnapshot: frozenRates);
+        
+        // Save immediately to prevent future changes
+        LotStorageService.saveLot(_lot).catchError((e) {
+          print('Error saving rate freeze: $e');
+        });
+      }
+    } else {
+      // New LOT (should already have rate snapshot from initialization)
+      // Use current defaults as fallback
+      if (_calculationEngine != null) {
+        final defaults = _calculationEngine!.defaults;
+        effectiveRates.addAll({
+          'nitric': defaults.defaultNitricRate,
+          'hcl': defaults.defaultHclRate,
+          'worker': defaults.calculatedWorkerRate,
+          'rent': defaults.calculatedRentRate,
+          'account': defaults.calculatedAccountRate,
+          'cu': defaults.defaultCuRate,
+          'tin': defaults.defaultTinRate,
+          'pd': defaults.defaultPdRate,
+          'other': defaults.defaultOtherRate,
+        });
+      }
+    }
+
+    // Finally override with custom rates (LOT-specific changes)
+    effectiveRates.addAll(_customRates);
+    
+    return effectiveRates;
+  }
+
+  Future<void> _saveManualEntries() async {
+    try {
+      final pattiQuantity = double.tryParse(_pattiQuantityController.text) ?? 0.0;
+      final pattiRate = double.tryParse(_pattiRateController.text) ?? 0.0;
+      final pdQuantity = double.tryParse(_pdQuantityController.text);
+      final notes = _notesController.text.trim();
+      
+      final updatedLot = _lot.copyWith(
+        lotNumber: _lotNumberController.text.trim(),
+        pattiQuantity: pattiQuantity,
+        pattiRate: pattiRate,
+        pdQuantity: pdQuantity,
+        manualEntries: _manualEntries,
+        customRates: _customRates,
+        calculationResult: _calculationResult,
+        notes: notes.isEmpty ? null : notes,
+      );
+      
+      await LotStorageService.saveLot(updatedLot);
+      
+      setState(() {
+        _lot = updatedLot;
+      });
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Manual entries saved successfully!'),
+            backgroundColor: AppColors.successGreen,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error saving manual entries: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving manual entries: $e'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   void _calculateResults() {
@@ -1200,32 +1323,8 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
           }
         }
 
-        // CRITICAL FIX: Use rate snapshot if available, otherwise use current defaults
-        final effectiveRates = <String, double>{};
-
-        // First add current defaults as fallback
-        if (_calculationEngine != null) {
-          final defaults = _calculationEngine!.defaults;
-          effectiveRates.addAll({
-            'nitric': defaults.defaultNitricRate,
-            'hcl': defaults.defaultHclRate,
-            'worker': defaults.calculatedWorkerRate,
-            'rent': defaults.calculatedRentRate,
-            'account': defaults.calculatedAccountRate,
-            'cu': defaults.defaultCuRate,
-            'tin': defaults.defaultTinRate,
-            'pd': defaults.defaultPdRate,
-            'other': defaults.defaultOtherRate,
-          });
-        }
-
-        // Then override with rate snapshot if available (for existing LOTs)
-        if (_lot.rateSnapshot.isNotEmpty) {
-          effectiveRates.addAll(_lot.rateSnapshot);
-        }
-
-        // Finally override with custom rates (LOT-specific changes)
-        effectiveRates.addAll(_customRates);
+        // Use the same effective rates logic as Materials tab
+        final effectiveRates = _getEffectiveRates();
         
         // Use AdvancedCalculationEngine for automatic calculation of HCl, nitric, etc.
         final result = _calculationEngine!.calculateProcess(
@@ -1466,10 +1565,13 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
       );
     }
 
+    // Use the same effective rates logic as _calculateResults
+    final effectiveRates = _getEffectiveRates();
+    
     final materials = _calculationEngine!.createMaterialInputs(
       pattiQuantity: pattiQuantity,
       pattiRate: pattiRate,
-      customRates: _customRates,
+      customRates: effectiveRates,
     );
 
     // Separate materials into main and byproduct
@@ -1756,7 +1858,7 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
               ],
             ),
             const SizedBox(height: AppTheme.spacing16),
-            _buildMetricsRow('PD Efficiency', '${result.pdEfficiency.toStringAsFixed(2)}%'),
+            _buildMetricsRow('PD Efficiency', '${result.pdEfficiency.toStringAsFixed(4)}%'),
             _buildMetricsRow('Profit per 100kg', '₹${result.profitPer100kg.toStringAsFixed(2)}'),
             _buildMetricsRow('Material Cost/Unit', '₹${result.materialCostPerUnit.toStringAsFixed(2)}'),
             _buildMetricsRow('Chemical Cost/Unit', '₹${result.chemicalCostPerUnit.toStringAsFixed(2)}'),
@@ -1870,14 +1972,49 @@ class _MobileLotEntryScreenState extends State<MobileLotEntryScreen>
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final newRate = double.tryParse(controller.text);
                 if (newRate != null && newRate > 0) {
                   setState(() {
                     _customRates[material.materialId] = newRate;
                   });
                   _calculateResults();
-                  Navigator.pop(context);
+                  
+                  // Auto-save the LOT with updated custom rates
+                  try {
+                    final updatedLot = _lot.copyWith(
+                      customRates: _customRates,
+                      calculationResult: _calculationResult,
+                    );
+                    await LotStorageService.saveLot(updatedLot);
+                    setState(() {
+                      _lot = updatedLot;
+                    });
+                    
+                    Navigator.pop(context);
+                    
+                    // Show success message
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${material.name} rate updated to ₹${newRate.toStringAsFixed(2)}'),
+                          backgroundColor: AppColors.successGreen,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    Navigator.pop(context);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error saving rate: $e'),
+                          backgroundColor: AppColors.error,
+                          duration: const Duration(seconds: 3),
+                        ),
+                      );
+                    }
+                  }
                 }
               },
               child: const Text('Save'),

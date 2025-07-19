@@ -406,7 +406,7 @@ class _MobileAnalyticsScreenState extends State<MobileAnalyticsScreen> {
               children: [
                 _buildPerformanceRow(
                   'Average Efficiency',
-                  '${_avgEfficiency.toStringAsFixed(2)}%',
+                  '${_avgEfficiency.toStringAsFixed(4)}%',
                   _getEfficiencyColor(_avgEfficiency),
                   Icons.speed,
                 ),

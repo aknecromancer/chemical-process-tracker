@@ -550,7 +550,7 @@ class _BatchHistoryScreenState extends State<BatchHistoryScreen> {
                             Expanded(
                               child: _buildMetric(
                                 'PD Efficiency',
-                                '${batch.pdEfficiency.toStringAsFixed(2)}%',
+                                '${batch.pdEfficiency.toStringAsFixed(4)}%',
                                 Colors.blue,
                                 Icons.analytics,
                               ),

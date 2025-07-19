@@ -468,7 +468,7 @@ class AdvancedCalculationEngine {
       } else if (pattiQuantity > 0) {
         final efficiency = (pdQuantity / pattiQuantity) * 100;
         if (!validatePdEfficiency(efficiency)) {
-          errors.add('PD efficiency ${efficiency.toStringAsFixed(2)}% is outside acceptable range (0.1% - 10%)');
+          errors.add('PD efficiency ${efficiency.toStringAsFixed(4)}% is outside acceptable range (0.1% - 10%)');
         }
       }
     }

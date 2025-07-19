@@ -299,7 +299,7 @@ class ExportService {
               children: [
                 pw.Text('Total Cost: ₹${result?.totalCost?.toStringAsFixed(2) ?? 'N/A'}'),
                 pw.Text('Profit/Loss: ₹${result?.finalProfitLoss?.toStringAsFixed(2) ?? 'N/A'}'),
-                pw.Text('Efficiency: ${result?.pdEfficiency?.toStringAsFixed(2) ?? 'N/A'}%'),
+                pw.Text('Efficiency: ${result?.pdEfficiency?.toStringAsFixed(4) ?? 'N/A'}%'),
               ],
             ),
           ],
@@ -469,7 +469,7 @@ class ExportService {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('Average Efficiency: ${avgEfficiency.toStringAsFixed(2)}%'),
+                pw.Text('Average Efficiency: ${avgEfficiency.toStringAsFixed(4)}%'),
                 pw.Text('Profit Margin: ${totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toStringAsFixed(2) : '0.00'}%'),
               ],
             ),
@@ -647,7 +647,7 @@ class ExportService {
               children: [
                 pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(_dateFormat.format(batch.date))),
                 pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('₹${batch.calculationResult?.finalProfitLoss?.toStringAsFixed(2) ?? 'N/A'}')),
-                pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('${batch.calculationResult?.pdEfficiency?.toStringAsFixed(2) ?? 'N/A'}%')),
+                pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('${batch.calculationResult?.pdEfficiency?.toStringAsFixed(4) ?? 'N/A'}%')),
               ],
             )),
           ],
