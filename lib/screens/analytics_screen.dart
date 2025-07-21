@@ -267,7 +267,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   children: [
                     Text(
                       'Custom LOT Selection',
-                      style: AppTheme.titleSmall.copyWith(
+                      style: AppTheme.titleMedium.copyWith(
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary,
                       ),
@@ -307,7 +307,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Future<void> _showLotFilterDialog() async {
     final availableLots = _lots.toList()
-      ..sort((a, b) => b.createdDate.compareTo(a.createdDate));
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     
     final result = await showDialog<List<String>>(
       context: context,
@@ -354,7 +354,7 @@ class _LotSelectionDialogState extends State<_LotSelectionDialog> {
     
     return widget.availableLots.where((lot) {
       return lot.lotNumber.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-             lot.pattiDetails.toLowerCase().contains(_searchQuery.toLowerCase());
+             (lot.notes?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
     }).toList();
   }
   
@@ -398,14 +398,14 @@ class _LotSelectionDialogState extends State<_LotSelectionDialog> {
             
             Container(
               decoration: BoxDecoration(
-                color: AppColors.cardBackground,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(AppTheme.borderRadius12),
                 border: Border.all(color: AppColors.border),
               ),
               child: TextField(
                 onChanged: (value) => setState(() => _searchQuery = value),
                 decoration: InputDecoration(
-                  hintText: 'Search LOTs by number or Patti details...',
+                  hintText: 'Search LOTs by number or notes...',
                   prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.all(AppTheme.spacing16),
@@ -517,7 +517,7 @@ class _LotSelectionDialogState extends State<_LotSelectionDialog> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    lot.pattiDetails,
+                                    lot.notes ?? 'No notes',
                                     style: AppTheme.bodySmall.copyWith(
                                       color: AppColors.textSecondary,
                                     ),
