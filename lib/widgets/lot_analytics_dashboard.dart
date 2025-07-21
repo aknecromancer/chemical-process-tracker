@@ -9,11 +9,13 @@ import 'premium_card.dart';
 class LotAnalyticsDashboard extends StatelessWidget {
   final List<ProductionLot> lots;
   final int daysToShow;
+  final bool isCustomSelection;
 
   const LotAnalyticsDashboard({
     super.key,
     required this.lots,
     this.daysToShow = 30,
+    this.isCustomSelection = false,
   });
 
   @override
@@ -136,10 +138,12 @@ class LotAnalyticsDashboard extends StatelessWidget {
       children: [
         // Header
         PremiumCardHeader(
-          title: 'LOT-Based Analytics',
-          subtitle: 'Performance insights based on LOT completion dates',
-          icon: Icons.insights,
-          iconColor: AppColors.primaryBlue,
+          title: isCustomSelection ? 'Custom LOT Analytics' : 'LOT-Based Analytics',
+          subtitle: isCustomSelection 
+              ? 'Performance insights for ${lots.length} selected LOT${lots.length != 1 ? 's' : ''}'
+              : 'Performance insights based on LOT completion dates',
+          icon: isCustomSelection ? Icons.filter_alt : Icons.insights,
+          iconColor: isCustomSelection ? AppColors.successGreen : AppColors.primaryBlue,
         ),
         const SizedBox(height: AppTheme.spacing20),
         
@@ -187,6 +191,13 @@ class LotAnalyticsDashboard extends StatelessWidget {
   }
 
   List<ProductionLot> _getCompletedLots() {
+    if (isCustomSelection) {
+      return lots
+          .where((lot) => lot.isCompleted && lot.completedDate != null)
+          .toList()
+        ..sort((a, b) => a.completedDate!.compareTo(b.completedDate!));
+    }
+    
     final cutoffDate = DateTime.now().subtract(Duration(days: daysToShow));
     return lots
         .where((lot) => lot.isCompleted && lot.completedDate != null)
